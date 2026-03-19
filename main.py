@@ -38,7 +38,9 @@ except ImportError:
 
 # --- ⚙️ CONFIGURARE ---
 # Poți pune mai multe token-uri separate prin virgulă: "token1, token2"
-TOKEN_PRINCIPAL = "MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTQ3NzYzMzM2NTkyMTUwMTI2NQ.GI_uad.GhNorUGJN85juYhJKnUktZ9yYfiSZuBBywgCO8"
+# Citește din Render, dacă nu găsește, folosește lista ta ca backup
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE")
+
 PREFIX = "$"
 
 # Creare structură foldere
