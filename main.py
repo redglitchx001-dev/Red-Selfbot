@@ -40,14 +40,14 @@ except ImportError:
 TOKEN_PRINCIPAL = "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G3pX4X.xUuvI-DEUvgKqCioUiaCvN3TBIVJjWb9lC5gMc"
 PREFIX = "$"
 
-# Stări globale (pentru gestionare foldere)
+# Creare structură foldere
 for f in ["music", "profiles", "clones", "archives", "logs"]:
     if not os.path.exists(f): os.makedirs(f)
 
 selfbots = {} 
 
 def setup_bot(b):
-    # Variabile de stare locale pentru fiecare instanță de bot
+    # State variables per bot instance
     log_chat_active = False
     log_dm_active = False
     anti_kick = False
@@ -224,6 +224,7 @@ $adfiles         - Upload MP3 (atașament)
     @b.command()
     async def prfdwn(ctx, user: discord.Member):
         await ctx.message.delete()
+        if not os.path.exists("profiles"): os.makedirs("profiles")
         data = {
             "name": user.name,
             "id": user.id,
@@ -431,6 +432,9 @@ $adfiles         - Upload MP3 (atașament)
         print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
 
 # --- MAIN BOT ---
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
 bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
 setup_bot(bot)
 
