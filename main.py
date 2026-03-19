@@ -38,7 +38,7 @@ except ImportError:
 
 # --- ⚙️ CONFIGURARE ---
 # Poți pune mai multe token-uri separate prin virgulă: "token1, token2"
-TOKEN_PRINCIPAL = "MTQ3MjU2MzE4ODMyNjQ2OTcxOA.G3WcMv.G5w36AeGXWBkPrTBEie4UnGENYB0qrKIaNpd14"
+TOKEN_PRINCIPAL = "MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTQ3NzYzMzM2NTkyMTUwMTI2NQ.GI_uad.GhNorUGJN85juYhJKnUktZ9yYfiSZuBBywgCO8"
 PREFIX = "$"
 
 # Creare structură foldere
