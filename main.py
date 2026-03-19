@@ -37,7 +37,8 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-TOKEN_PRINCIPAL = "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G3pX4X.xUuvI-DEUvgKqCioUiaCvN3TBIVJjWb9lC5gMc"
+# Poți pune mai multe token-uri separate prin virgulă: "token1, token2"
+TOKEN_PRINCIPAL = "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G3pX4X.xUuvI-DEUvgKqCioUiaCvN3TBIVJjWb9lC5gMc,MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk"
 PREFIX = "$"
 
 # Creare structură foldere
@@ -377,15 +378,19 @@ $adfiles         - Upload MP3 (atașament)
     async def selfbot(ctx, token=None, name=None):
         await ctx.message.delete()
         if token and name:
-            selfbots[name] = token
+            selfbots[name] = {"token": token}
             await ctx.send(f"🤖 Adăugat: `{name}`", delete_after=5)
-            def run_bot(t):
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-                new_bot = commands.Bot(command_prefix='$', self_bot=True, help_command=None)
+            
+            async def start_new_bot(t, n):
+                new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
                 setup_bot(new_bot)
-                new_bot.run(t)
-            threading.Thread(target=run_bot, args=(token,), daemon=True).start()
+                selfbots[n]["bot"] = new_bot
+                try:
+                    await new_bot.start(t)
+                except:
+                    if n in selfbots: del selfbots[n]
+
+            asyncio.create_task(start_new_bot(token, name))
         else:
             lista = "\n".join([f"- {n}" for n in selfbots.keys()]) if selfbots else "Niciun cont salvat."
             await ctx.send(f"🤖 **Conturi active:**\n{lista}", delete_after=10)
@@ -394,6 +399,9 @@ $adfiles         - Upload MP3 (atașament)
     async def selfbotr(ctx, name: str):
         await ctx.message.delete()
         if name in selfbots:
+            bot_data = selfbots[name]
+            if "bot" in bot_data:
+                await bot_data["bot"].close()
             del selfbots[name]
             await ctx.send(f"🤖 Șters: `{name}`", delete_after=5)
         else: await ctx.send(f"❌ Contul `{name}` nu există.", delete_after=5)
@@ -402,13 +410,6 @@ $adfiles         - Upload MP3 (atașament)
     async def on_message_delete(m):
         if m.author != b.user:
             snipe_data[m.channel.id] = f"🎯 **{m.author}**: {m.content}"
-
-    @b.event
-    async def on_member_update(before, after):
-        if after.id in tracked_users and before.status != after.status:
-            try:
-                await b.user.send(f"👁️ **TRACK:** `{after.name}` este acum **{after.status}**")
-            except: pass
 
     @b.event
     async def on_message(m):
@@ -442,14 +443,33 @@ def run_health_server():
             self.wfile.write(b"OK")
         def log_message(self, format, *args): return
 
-    # Render injectează automat variabila PORT (de obicei 10000)
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), HealthHandler)
     print(f"📡 Health check server pornit pe portul {port}")
     server.serve_forever()
 
-# Pornim serverul HTTP într-un thread separat ca să nu blocheze botul
-threading.Thread(target=run_health_server, daemon=True).start()
+# --- MAIN RUN ---
+async def main_run():
+    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
+    tasks = []
+    
+    for i, token in enumerate(tokens):
+        name = f"MainBot_{i}"
+        new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+        setup_bot(new_bot)
+        selfbots[name] = {"token": token, "bot": new_bot}
+        tasks.append(new_bot.start(token))
+        print(f"🔄 Pornesc contul {i+1}/{len(tokens)}...")
 
-# Pornim botul Discord
-bot.run(TOKEN_PRINCIPAL)
+    await asyncio.gather(*tasks)
+
+if __name__ == "__main__":
+    # Pornim serverul HTTP într-un thread separat ca să nu blocheze botul
+    threading.Thread(target=run_health_server, daemon=True).start()
+    
+    try:
+        asyncio.run(main_run())
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print(f"❌ Eroare fatală la pornire: {e}")
