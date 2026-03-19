@@ -431,20 +431,25 @@ $adfiles         - Upload MP3 (atașament)
     async def on_ready():
         print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
 
-# --- MAIN BOT ---
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
-
-bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-setup_bot(bot)
-
-@bot.event
-async def on_ready():
-    os.system('clear')
-    print("="*40)
-    print(f"🚀 RED-SELFBOT V11 ONLINE!")
-    print(f"👤 Logat ca: {bot.user}")
-    print("="*40)
-
 # --- RUN ---
+def run_health_server():
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, format, *args): return
+
+    # Render injectează automat variabila PORT (de obicei 10000)
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthHandler)
+    print(f"📡 Health check server pornit pe portul {port}")
+    server.serve_forever()
+
+# Pornim serverul HTTP într-un thread separat ca să nu blocheze botul
+threading.Thread(target=run_health_server, daemon=True).start()
+
+# Pornim botul Discord
 bot.run(TOKEN_PRINCIPAL)
