@@ -37,9 +37,7 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-# Citește din variabila de mediu "TOKEN" din Render. 
-# Dacă nu există, folosește lista de backup.
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow")
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow,MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G962Nn.mb1BYtrVO_jO_G4_TWek3NC4tcgpewULGeFR3c,MTE3Nzg5NTA4NTU4NTc0Nzk4OQ.GiJA5e.9Pm_uGMpiHc5K7yJlh19uCkCGe2AdamTUaGjso")
 PREFIX = "$"
 
 # Creare structură foldere
@@ -49,7 +47,6 @@ for f in ["music", "profiles", "clones", "archives", "logs"]:
 selfbots = {} 
 
 def setup_bot(b):
-    # State variables per bot instance
     log_chat_active = False
     log_dm_active = False
     anti_kick = False
@@ -247,15 +244,12 @@ $adfiles         - Upload MP3 (atașament)
     @b.command()
     async def dsrv(ctx):
         await ctx.message.delete()
-        # Colectare date server: Nume, Categorii, Canale, Roluri
         data = {
             "name": ctx.guild.name,
             "roles": [],
             "categories": [],
             "orphan_channels": []
         }
-        
-        # Roluri (inclusiv @everyone pentru overwrites)
         for role in reversed(ctx.guild.roles):
             if not role.managed:
                 data["roles"].append({
@@ -280,15 +274,10 @@ $adfiles         - Upload MP3 (atașament)
                 })
             return overwrites
 
-        # Categorii și Canale
         for cat in ctx.guild.categories:
             chans = []
             for ch in cat.channels:
-                ch_data = {
-                    "n": ch.name, 
-                    "t": str(ch.type),
-                    "overwrites": get_overwrites(ch)
-                }
+                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
                 if isinstance(ch, discord.TextChannel):
                     ch_data["topic"] = ch.topic
                     ch_data["nsfw"] = ch.nsfw
@@ -296,21 +285,11 @@ $adfiles         - Upload MP3 (atașament)
                     ch_data["bitrate"] = ch.bitrate
                     ch_data["user_limit"] = ch.user_limit
                 chans.append(ch_data)
-            
-            data["categories"].append({
-                "n": cat.name, 
-                "overwrites": get_overwrites(cat),
-                "ch": chans
-            })
+            data["categories"].append({"n": cat.name, "overwrites": get_overwrites(cat), "ch": chans})
 
-        # Canale fără categorie
         for ch in ctx.guild.channels:
             if ch.category is None:
-                ch_data = {
-                    "n": ch.name, 
-                    "t": str(ch.type),
-                    "overwrites": get_overwrites(ch)
-                }
+                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
                 if isinstance(ch, discord.TextChannel):
                     ch_data["topic"] = ch.topic
                     ch_data["nsfw"] = ch.nsfw
@@ -322,7 +301,6 @@ $adfiles         - Upload MP3 (atașament)
         filename = f"clones/backup_{ctx.guild.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
-        
         await ctx.send(f"🏰 Backup salvat pentru **{ctx.guild.name}**!", delete_after=5)
 
     @b.command()
@@ -330,57 +308,32 @@ $adfiles         - Upload MP3 (atașament)
         await ctx.message.delete()
         if not os.path.exists("clones"): os.makedirs("clones")
         files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        
-        if not files:
-            return await ctx.send("🏰 Nu există backup-uri salvate.", delete_after=10)
-        
+        if not files: return await ctx.send("🏰 Nu există backup-uri salvate.", delete_after=10)
         msg = "🏰 **LISTĂ BACKUP-URI SALVATE:**\n```text\n"
         for i, f in enumerate(files, 1):
             try:
                 with open(f"clones/{f}", "r", encoding="utf-8") as file:
                     data = json.load(file)
-                    s_name = data.get("name", "Unknown")
-                    msg += f"{i}. {s_name} ({f})\n"
-            except:
-                msg += f"{i}. Eroare citire: {f}\n"
+                    msg += f"{i}. {data.get('name', 'Unknown')} ({f})\n"
+            except: msg += f"{i}. Eroare citire: {f}\n"
         msg += "```\n*Folosește `$psrv [nr]` pentru a aplica.*"
         await ctx.send(msg, delete_after=30)
 
     @b.command()
     async def psrv(ctx, nr: int):
         await ctx.message.delete()
-        if not os.path.exists("clones"): return await ctx.send("❌ Folderul `clones` nu există.", delete_after=5)
         files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        
-        if not (1 <= nr <= len(files)):
-            return await ctx.send(f"❌ Număr invalid! Alege între 1 și {len(files)}.", delete_after=5)
-        
+        if not (1 <= nr <= len(files)): return await ctx.send(f"❌ Număr invalid!", delete_after=5)
         path = f"clones/{files[nr-1]}"
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        await ctx.send(f"🏰 Aplicare backup: **{data['name']}**... (Așteaptă)", delete_after=10)
-
-        # Mapare roluri vechi -> noi
+        with open(path, "r", encoding="utf-8") as f: data = json.load(f)
+        await ctx.send(f"🏰 Aplicare backup: **{data['name']}**...", delete_after=10)
         role_mapping = {}
-        everyone_role = ctx.guild.default_role
-        
-        # 1. Creare Roluri
         for r in data.get("roles", []):
             if r.get("is_everyone"):
-                role_mapping[r["id"]] = everyone_role
-                try: await everyone_role.edit(permissions=discord.Permissions(r["p"]))
-                except: pass
+                role_mapping[r["id"]] = ctx.guild.default_role
                 continue
-                
             try:
-                new_role = await ctx.guild.create_role(
-                    name=r["n"],
-                    color=discord.Color(r["c"]),
-                    permissions=discord.Permissions(r["p"]),
-                    hoist=r["h"],
-                    mentionable=r["m"]
-                )
+                new_role = await ctx.guild.create_role(name=r["n"], color=discord.Color(r["c"]), permissions=discord.Permissions(r["p"]), hoist=r["h"], mentionable=r["m"])
                 role_mapping[r["id"]] = new_role
             except: pass
 
@@ -388,80 +341,37 @@ $adfiles         - Upload MP3 (atașament)
             overwrites = {}
             for ow in ow_data:
                 target = role_mapping.get(ow["id"])
-                if target:
-                    overwrites[target] = discord.PermissionOverwrite.from_pair(
-                        discord.Permissions(ow["allow"]),
-                        discord.Permissions(ow["deny"])
-                    )
+                if target: overwrites[target] = discord.PermissionOverwrite.from_pair(discord.Permissions(ow["allow"]), discord.Permissions(ow["deny"]))
             return overwrites
 
-        # 2. Creare Categorii și Canale
         for cat_data in data.get("categories", []):
             try:
-                ow = sync_overwrites(cat_data.get("overwrites", []))
-                category = await ctx.guild.create_category(cat_data["n"], overwrites=ow)
+                category = await ctx.guild.create_category(cat_data["n"], overwrites=sync_overwrites(cat_data.get("overwrites", [])))
                 for ch in cat_data["ch"]:
-                    ch_ow = sync_overwrites(ch.get("overwrites", []))
-                    if ch["t"] == "text":
-                        await category.create_text_channel(
-                            ch["n"], 
-                            topic=ch.get("topic"), 
-                            nsfw=ch.get("nsfw", False),
-                            overwrites=ch_ow
-                        )
-                    elif ch["t"] == "voice":
-                        await category.create_voice_channel(
-                            ch["n"],
-                            bitrate=ch.get("bitrate", 64000),
-                            user_limit=ch.get("user_limit", 0),
-                            overwrites=ch_ow
-                        )
+                    if ch["t"] == "text": await category.create_text_channel(ch["n"], topic=ch.get("topic"), nsfw=ch.get("nsfw", False), overwrites=sync_overwrites(ch.get("overwrites", [])))
+                    elif ch["t"] == "voice": await category.create_voice_channel(ch["n"], bitrate=ch.get("bitrate", 64000), user_limit=ch.get("user_limit", 0), overwrites=sync_overwrites(ch.get("overwrites", [])))
             except: pass
-
-        # 3. Canale fără categorie
-        for ch in data.get("orphan_channels", []):
-            try:
-                ch_ow = sync_overwrites(ch.get("overwrites", []))
-                if ch["t"] == "text":
-                    await ctx.guild.create_text_channel(
-                        ch["n"], 
-                        topic=ch.get("topic"), 
-                        nsfw=ch.get("nsfw", False),
-                        overwrites=ch_ow
-                    )
-                elif ch["t"] == "voice":
-                    await ctx.guild.create_voice_channel(
-                        ch["n"],
-                        bitrate=ch.get("bitrate", 64000),
-                        user_limit=ch.get("user_limit", 0),
-                        overwrites=ch_ow
-                    )
-            except: pass
-
-        await ctx.send("✅ Backup aplicat cu succes!", delete_after=5)
+        await ctx.send("✅ Backup aplicat!", delete_after=5)
 
     @b.command()
     async def clchat(ctx, amount: int = 100):
         await ctx.message.delete()
         fname = f"archives/chat_{ctx.channel.id}.txt"
         with open(fname, "w", encoding="utf-8") as f:
-            async for m in ctx.channel.history(limit=amount):
-                f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+            async for m in ctx.channel.history(limit=amount): f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
         await ctx.send(f"📂 Chat salvat în `{fname}`", delete_after=10)
 
     @b.command()
     async def clist(ctx):
         await ctx.message.delete()
-        files = os.listdir("archives")
-        await ctx.send(f"📂 **Arhive:** `{files}`", delete_after=15)
+        await ctx.send(f"📂 **Arhive:** `{os.listdir('archives')}`", delete_after=15)
 
     @b.command()
     async def pstchat(ctx, channel_id: str):
         await ctx.message.delete()
         path = f"archives/chat_{channel_id}.txt"
         if not os.path.exists(path): return await ctx.send("❌ Arhivă negăsită!", delete_after=5)
-        with open(path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
+        with open(path, "r", encoding="utf-8") as f: lines = f.readlines()
         for line in lines[-10:]:
             await ctx.send(line.strip())
             await asyncio.sleep(0.5)
@@ -471,16 +381,14 @@ $adfiles         - Upload MP3 (atașament)
         nonlocal anti_kick
         await ctx.message.delete()
         anti_kick = not anti_kick
-        status = "ACTIVAT" if anti_kick else "DEZACTIVAT"
-        await ctx.send(f"🛡️ Anti-Kick: **{status}**", delete_after=5)
+        await ctx.send(f"🛡️ Anti-Kick: **{'ACTIVAT' if anti_kick else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command(name="anti-ban")
     async def anti_ban_cmd(ctx):
         nonlocal anti_ban
         await ctx.message.delete()
         anti_ban = not anti_ban
-        status = "ACTIVAT" if anti_ban else "DEZACTIVAT"
-        await ctx.send(f"🛡️ Anti-Ban: **{status}**", delete_after=5)
+        await ctx.send(f"🛡️ Anti-Ban: **{'ACTIVAT' if anti_ban else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command()
     async def ghostping(ctx, user: discord.Member):
@@ -492,31 +400,27 @@ $adfiles         - Upload MP3 (atașament)
     async def tokencheck(ctx, token: str):
         await ctx.message.delete()
         r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": token})
-        res = "✅ Valid" if r.status_code == 200 else "❌ Invalid"
-        await ctx.send(f"🎫 Token: {res}", delete_after=10)
+        await ctx.send(f"🎫 Token: {'✅ Valid' if r.status_code == 200 else '❌ Invalid'}", delete_after=10)
 
     @b.command()
     async def logchat(ctx):
         nonlocal log_chat_active
         await ctx.message.delete()
         log_chat_active = not log_chat_active
-        status = "ACTIVAT" if log_chat_active else "DEZACTIVAT"
-        await ctx.send(f"📜 Logger Chat: **{status}**", delete_after=5)
+        await ctx.send(f"📜 Logger Chat: **{'ACTIVAT' if log_chat_active else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command()
     async def logdm(ctx):
         nonlocal log_dm_active
         await ctx.message.delete()
         log_dm_active = not log_dm_active
-        status = "ACTIVAT" if log_dm_active else "DEZACTIVAT"
-        await ctx.send(f"📜 Logger DM: **{status}**", delete_after=5)
+        await ctx.send(f"📜 Logger DM: **{'ACTIVAT' if log_dm_active else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command()
     async def sniped(ctx):
         await ctx.message.delete()
         data = snipe_data.get(ctx.channel.id)
-        if data: await ctx.send(data, delete_after=15)
-        else: await ctx.send("❌ Nimic de recuperat.", delete_after=5)
+        await ctx.send(data if data else "❌ Nimic de recuperat.", delete_after=15)
 
     @b.command()
     async def track(ctx, user: discord.Member):
@@ -526,4 +430,94 @@ $adfiles         - Upload MP3 (atașament)
             await ctx.send(f"👁️ Nu mai urmăresc: `{user.name}`", delete_after=5)
         else:
             tracked_users.add(user.id)
-   
+            await ctx.send(f"👁️ Urmăresc: `{user.name}`", delete_after=5)
+
+    @b.command()
+    async def live(ctx, *, text):
+        await ctx.message.delete()
+        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/red_glitch"))
+
+    @b.command()
+    async def stats(ctx, *, text):
+        await ctx.message.delete()
+        await b.change_presence(activity=discord.Game(name=text))
+
+    @b.command()
+    async def remstats(ctx):
+        await ctx.message.delete()
+        await b.change_presence(activity=None)
+
+    @b.command()
+    async def selfbot(ctx, token=None, name=None):
+        await ctx.message.delete()
+        if token and name:
+            selfbots[name] = {"token": token}
+            async def start_new_bot(t, n):
+                new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+                setup_bot(new_bot)
+                selfbots[n]["bot"] = new_bot
+                try: await new_bot.start(t)
+                except: 
+                    if n in selfbots: del selfbots[n]
+            asyncio.create_task(start_new_bot(token, name))
+            await ctx.send(f"🤖 Adăugat: `{name}`", delete_after=5)
+        else: await ctx.send(f"🤖 **Conturi active:**\n{list(selfbots.keys())}", delete_after=10)
+
+    @b.command()
+    async def selfbotr(ctx, name: str):
+        await ctx.message.delete()
+        if name in selfbots:
+            if "bot" in selfbots[name]: await selfbots[name]["bot"].close()
+            del selfbots[name]
+            await ctx.send(f"🤖 Șters: `{name}`", delete_after=5)
+
+    @b.event
+    async def on_message_delete(m):
+        if m.author != b.user: snipe_data[m.channel.id] = f"🎯 **{m.author}**: {m.content}"
+
+    @b.event
+    async def on_member_update(before, after):
+        if after.id in tracked_users and before.status != after.status:
+            print(f"👁️ **TRACK:** `{after.name}` este acum **{after.status}**")
+
+    @b.event
+    async def on_message(m):
+        nonlocal log_chat_active, log_dm_active
+        if log_chat_active and m.guild and m.author != b.user:
+            with open(f"logs/chat_{m.channel.id}.txt", "a", encoding="utf-8") as f: f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        if log_dm_active and not m.guild and m.author != b.user:
+            with open(f"logs/dm_{m.author.id}.txt", "a", encoding="utf-8") as f: f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        if m.author == b.user: await b.process_commands(m)
+
+    @b.event
+    async def on_ready(): print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
+
+def run_health_server():
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200); self.send_header('Content-type', 'text/plain'); self.end_headers(); self.wfile.write(b"OK")
+        def log_message(self, format, *args): return
+    port = int(os.environ.get("PORT", 10000))
+    HTTPServer(('0.0.0.0', port), HealthHandler).serve_forever()
+
+async def main_run():
+    print("🎬 Inițiez main_run...")
+    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
+    for i, token in enumerate(tokens):
+        name = f"MainBot_{i}"
+        new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+        setup_bot(new_bot)
+        selfbots[name] = {"token": token, "bot": new_bot}
+        async def safe_start(b, t, idx):
+            try: print(f"📡 Logare cont {idx+1}..."); await b.start(t)
+            except Exception as e: print(f"❌ EROARE cont {idx+1}: {e}")
+        asyncio.create_task(safe_start(new_bot, token, i))
+        await asyncio.sleep(2.0)
+    while True:
+        print(f"⏰ Keep-alive. Conturi: {len(selfbots)}"); await asyncio.sleep(600)
+
+if __name__ == "__main__":
+    threading.Thread(target=run_health_server, daemon=True).start()
+    try: asyncio.run(main_run())
+    except: pass
