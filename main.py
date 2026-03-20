@@ -37,9 +37,9 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-# Citește din Render, dacă nu găsește, folosește lista ta ca backup
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow,MTQ4NDExMTgxODgzMzEzNzc2Nw.GCNGai.Rr9WzdKZYm9Ek674MJZ5iWlXo9wHWq7CfZg1us")
-
+# Citește din variabila de mediu "TOKEN" din Render. 
+# Dacă nu există, folosește lista de backup.
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow")
 PREFIX = "$"
 
 # Creare structură foldere
@@ -526,9 +526,4 @@ $adfiles         - Upload MP3 (atașament)
             await ctx.send(f"👁️ Nu mai urmăresc: `{user.name}`", delete_after=5)
         else:
             tracked_users.add(user.id)
-            await ctx.send(f"👁️ Urmăresc: `{user.name}`", delete_after=5)
-
-    @b.command()
-    async def live(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/red_glitch")) 
+   
