@@ -120,7 +120,8 @@ $REDHELP        - Meniu complet (vizibil 30 sec)
 
 ------------------------------------------
 Credits: RedGlitchX / redglitchx. / XTASK 
-                 Nightu / nightu._. / ⌬ VORTASK
+         Nightu / nightu._. / ⌬ VORTASK
+         Bulgaruu / o.bulgaru 
 ------------------------------------------
 ```"""
         await ctx.send(menu, delete_after=30)
