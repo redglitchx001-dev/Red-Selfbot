@@ -72,9 +72,9 @@ $plays [nr]    - Pornește piesa cu numărul X
 $stops         - Oprește muzica și ieși din canal
 
 ✉️ ・ SPAM BOT:
-$spam @user    - Începe spam-ul din botjura.txt
+$start @user    - Începe spam-ul din botjura.txt
 $stop          - Oprește procesul de spam
-$repeat [m][n][d] - Repetă text de X ori cu delay
+$spam [m][n][d] - Repetă text de X ori cu delay
 
 👤 ・ PROFILE ARCHIVER:
 $prfdwn @user  - Descarcă profilul în /profiles
@@ -195,7 +195,7 @@ $adfiles         - Upload MP3 (atașament)
         await ctx.send(f"🎵 **Librărie:**\n```\n{lista}\n```", delete_after=20)
 
     @b.command()
-    async def spam(ctx, user: discord.Member = None):
+    async def start(ctx, user: discord.Member = None):
         nonlocal spamming
         await ctx.message.delete()
         spamming = True
@@ -217,7 +217,7 @@ $adfiles         - Upload MP3 (atașament)
         await ctx.send("🛑 Spam oprit.", delete_after=3)
 
     @b.command()
-    async def repeat(ctx, msg: str, count: int, delay: float = 0.5):
+    async def spam(ctx, msg: str, count: int, delay: float = 0.5):
         await ctx.message.delete()
         for _ in range(count):
             await ctx.send(msg)
