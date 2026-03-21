@@ -1,22 +1,24 @@
 # -*- coding: utf-8 -*-
-import sys, os, asyncio, json, datetime, random, time, requests, re
+import sys, os, asyncio, json, random, time, datetime, requests, base64, re
 import discord
 from discord.ext import commands
-from urllib.parse import quote
 
 # --- CONFIGURARE ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G4Aq81.g1mMCVdL2bCL3DQa9m5eq0f0OH6TeocoB5pxgg")
+GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyCilFHONVZu2nWiONpeFfNt7UEZT0ckGaE")
 PREFIX = "$"
 START_TIME = time.time()
 
-def setup_bot(b):
+bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
 
-    # --- 📋 CATEGORII HELP ---
+# ==========================================
+# --- 📋 MENIURI HELP (Emoji ・ text) ---
+# ==========================================
 
-    @b.command()
-    async def REDHELP(ctx):
-        await ctx.message.delete()
-        menu = """```text
+@bot.command()
+async def REDHELP(ctx):
+    await ctx.message.delete()
+    menu = """```text
 --- 📋 ・ MENIU CENTRAL AJUTOR ---
 
 🤖 ・ $hAI     - AI & Intelligence
@@ -25,551 +27,418 @@ def setup_bot(b):
 🛠️ ・ $hutils  - Utils & Tools
 ✨ ・ $hstatus - Status & Selfbot
 🚀 ・ $hadv    - Advanced & Special
+🔥 ・ $hT7     - Tier 7 (Extreme)
 
-⚙️ ・ ADMIN:
-$REDHELP        - Meniu complet
-$restartstats   - Resetează uptime-ul
+⚙️ ・ ADMIN: $restartstats, $showtoken
 ```"""
-        await ctx.send(menu, delete_after=60)
+    await ctx.send(menu, delete_after=60)
 
-    @b.command()
-    async def hAI(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-🤖 ・ AI & INTELLIGENCE (hAI):
-$ai [text]     - Întreabă AI-ul
-$genimg [text] - Generează imagine AI
-$brain [q]     - Răspuns rapid enciclopedic
-$google [q]    - Căutare rapidă Google
-$ytsearch [q]  - Căutare pe YouTube
-$wiki [q]      - Căutare pe Wikipedia
+@bot.command()
+async def hAI(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🤖 ・ AI & INTELLIGENCE:
+🤖 ・ $ai [text]     - Întreabă Google Gemini
+🎨 ・ $genimg [text] - Generează imagine AI
+🧠 ・ $brain [q]     - Răspuns enciclopedic rapid
+🔍 ・ $google [q]    - Căutare rapidă Google
+🎥 ・ $ytsearch [q]  - Căutare pe YouTube
+📖 ・ $wiki [q]      - Căutare pe Wikipedia
 ```""", delete_after=60)
 
-    @b.command()
-    async def hM(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-🛡️ ・ MODERATION & SERVER (hM):
-$kick @user    - Dă afară un membru
-$ban @user     - Banează un membru
-$unban [id]    - Scoate ban-ul
-$massunban     - Scoate ban-ul tuturor
-$softban @user - Ban + Unban rapid
-$mute @user    - Pune mute (rol necesar)
-$unmute @user  - Scoate mute
-$purge [nr]    - Șterge X mesaje
-$slowmode [s]  - Setează slowmode canal
-$lock / $unlock- Blocare/Deblocare canal
-$nuke          - Șterge și recreează canalul
-$masschannel   - Creează X canale
-$massrole      - Creează X roluri
+@bot.command()
+async def hM(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🛡️ ・ MODERATION & SERVER:
+👢 ・ $kick @user    - Dă afară un membru
+🔨 ・ $ban @user     - Banează un membru
+🔓 ・ $unban [id]    - Scoate ban-ul după ID
+🌊 ・ $massunban     - Debanează pe toată lumea
+🔄 ・ $softban @user - Ban + Unban rapid
+🔇 ・ $mute @user    - Pune mute (necesită rol Muted)
+🔊 ・ $unmute @user  - Scoate mute
+🧹 ・ $purge [nr]    - Șterge X mesaje (ale tale)
+⏳ ・ $slowmode [s]  - Setează slowmode canal
+🔒 ・ $lock          - Blocare canal
+🔓 ・ $unlock        - Deblocare canal
+💥 ・ $nuke          - Șterge și recreează canalul
+➕ ・ $masschannel   - Creează 10 canale rapid
+🏷️ ・ $massrole      - Creează 10 roluri rapid
 ```""", delete_after=60)
 
-    @b.command()
-    async def hgame(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-🎮 ・ GAMES & FUN (hgame):
-$meme          - Arată un meme random
-$joke          - Spune o glumă
-$quote         - Arată un citat celebru
-$cat / $dog    - Poze cu animale
-$fact          - Un fapt interesant
-$howhot @user  - Cât de hot ești?
-$hug / $slap   - Interacțiuni
-$kill / $punch - Interacțiuni agresive
-$nitro         - Generează cod Nitro fake
-$gay @user     - Cât de gay ești?
-$iq @user      - Test IQ rapid
-$ship @u1 @u2  - Test de dragoste
-$slots         - Joc de păcănele
-$mines [nr]    - Joc de mine (💣)
+@bot.command()
+async def hgame(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🎮 ・ GAMES & FUN:
+😂 ・ $meme          - Arată un meme random
+🤡 ・ $joke          - Spune o glumă
+📜 ・ $quote         - Arată un citat celebru
+💡 ・ $fact          - Un fapt interesant
+🐱 ・ $cat / $dog    - Poze cu animale
+🔥 ・ $howhot @user  - Cât de hot ești?
+🫂 ・ $hug @user     - Îmbrățișare
+👊 ・ $slap @user    - Palmă
+💀 ・ $kill @user    - Omoară (textual)
+🥊 ・ $punch @user   - Boxează
+🎁 ・ $nitro         - Generează cod Nitro fake
+🏳️‍🌈 ・ $gay @user     - Cât de gay ești?
+🧠 ・ $iq @user      - Test IQ rapid
+❤️ ・ $ship @u1 @u2  - Test de dragoste
+🎰 ・ $slots         - Joc de păcănele
+💣 ・ $mines [nr]    - Joc de mine (5x5)
 ```""", delete_after=60)
 
-    @b.command()
-    async def hutils(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-🛠️ ・ UTILS & TOOLS (hutils):
-$avatar @user  - Vezi avatarul cuiva
-$banner @user  - Vezi bannerul cuiva
-$qr [text]     - Generează cod QR
-$ipinfo [ip]   - Detalii despre un IP
-$shorten [url] - Scurtează un link
-$weather [city]- Vremea în orașul X
-$crypto [coin] - Preț crypto actual
-$math [expr]   - Calculator matematic
-$binary / $hex - Conversie text
-$morse / $64   - Conversie text
-$bold / $italic- Formatare text
+@bot.command()
+async def hutils(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🛠️ ・ UTILS & TOOLS:
+🖼️ ・ $avatar @user  - Vezi avatarul cuiva
+🚩 ・ $banner @user  - Vezi bannerul cuiva
+🏁 ・ $qr [text]     - Generează cod QR
+🌐 ・ $ipinfo [ip]   - Detalii despre un IP
+🔗 ・ $shorten [url] - Scurtează un link
+🌦️ ・ $weather [city]- Vremea în orașul X
+🪙 ・ $crypto [coin] - Preț crypto actual
+🔢 ・ $math [expr]   - Calculator matematic
+📟 ・ $binary [text] - Conversie Binar
+📟 ・ $hex [text]    - Conversie Hex
+📟 ・ $64 [text]     - Conversie Base64
+📟 ・ $morse [text]  - Conversie Morse
+🅰️ ・ $bold [text]   - Formatare Bold
 ```""", delete_after=60)
 
-    @b.command()
-    async def hstatus(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-✨ ・ STATUS & UTIL (hstatus):
-$stats [text]  - Setează status personalizat
-$live [text]   - Setează status streaming mov
-$afk [reason]  - Setează motiv AFK
-$remstats      - Șterge statusul actual
-$restartstats  - Resetează uptime-ul
-$watching [t]  - Status Watching
-$listening [t] - Status Listening
-$playing [t]   - Status Playing
-$ping          - Vezi latența botului
-$uptime        - Timp de funcționare
-$typing [sec]  - Fake typing status
+@bot.command()
+async def hstatus(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+✨ ・ STATUS & UTIL:
+🎭 ・ $stats [text]  - Setează status custom
+💜 ・ $live [text]   - Setează status streaming
+💤 ・ $afk [reason]  - Setează status AFK
+🗑️ ・ $remstats      - Șterge statusul actual
+🔄 ・ $restartstats  - Resetează uptime-ul
+👀 ・ $watching [t]  - Status Watching
+🎧 ・ $listening [t] - Status Listening
+🎮 ・ $playing [t]   - Status Playing
+📡 ・ $ping          - Vezi latența botului
+🚀 ・ $uptime        - Timp de funcționare
+⌨️ ・ $typing [sec]  - Fake typing status
 ```""", delete_after=60)
 
-    @b.command()
-    async def hadv(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
-🚀 ・ ADVANCED & FUN (hadv):
-$steal [emoji] - Fură un emoji
-$urban [word]  - Urban Dictionary
-$timer [s] [r] - Setează un cronometru
-$purgeuser @u  - Șterge mesajele unui user
-$servericon    - Vezi iconița serverului
-$serverbanner  - Vezi bannerul serverului
-$ghostping @u  - Ping discret (delete instant)
-$secret [text] - Mesaj ascuns (spoiler)
-$nick [nume]   - Schimbă nickname-ul tău
-$hypesquad [h] - Schimbă casa HypeSquad
-$triggered @u  - Efect triggered pe avatar
-$wanted @u     - Efect wanted pe avatar
-$showtoken     - Vezi token-ul contului
+@bot.command()
+async def hadv(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🚀 ・ ADVANCED & SPECIAL:
+🤌 ・ $steal [emoji] - Link imagine emoji
+📖 ・ $urban [word]  - Urban Dictionary
+⏰ ・ $timer [s]     - Setează un cronometru
+🧹 ・ $purgeuser @u  - Șterge msjele unui user
+🖼️ ・ $servericon    - Vezi poza serverului
+🖼️ ・ $serverbanner  - Vezi bannerul serverului
+👻 ・ $ghostping @u  - Ping discret (delete)
+🕵️ ・ $secret [text] - Mesaj ascuns (spoiler)
+🏷️ ・ $nick [nume]   - Schimbă nickname-ul tău
+🚩 ・ $hypesquad [h] - Schimbă casa (bravery, etc)
+💢 ・ $triggered @u  - Efect triggered avatar
+🕵️ ・ $wanted @u     - Efect wanted avatar
+🔑 ・ $showtoken     - Vezi token-ul contului
 ```""", delete_after=60)
 
-    # --- 🤖 CATEGORIA: AI & INTELLIGENCE ---
-
-    @b.command()
-    async def ai(ctx, *, text):
-        await ctx.message.delete()
-        # Mock AI response (Simulare)
-        await ctx.send(f"🤖 **AI Răspuns:** Căutând informații despre `{text}`... În prezent, sunt configurat ca un Selfbot avansat. Răspunsul meu este: *Interesant subiect!*")
-
-    @b.command()
-    async def genimg(ctx, *, text):
-        await ctx.message.delete()
-        await ctx.send(f"🎨 **Generez imagine pentru:** `{text}`...\nhttps://pollinations.ai/p/{quote(text)}")
-
-    @b.command()
-    async def brain(ctx, *, query):
-        await ctx.message.delete()
-        await ctx.send(f"🧠 **Brain Search:** `{query}`\nhttps://www.wolframalpha.com/input?i={quote(query)}")
-
-    @b.command()
-    async def google(ctx, *, query):
-        await ctx.message.delete()
-        await ctx.send(f"🔍 **Google Search:** https://www.google.com/search?q={quote(query)}")
-
-    @b.command()
-    async def ytsearch(ctx, *, query):
-        await ctx.message.delete()
-        await ctx.send(f"📺 **YouTube Search:** https://www.youtube.com/results?search_query={quote(query)}")
-
-    @b.command()
-    async def wiki(ctx, *, query):
-        await ctx.message.delete()
-        await ctx.send(f"📖 **Wikipedia:** https://en.wikipedia.org/wiki/{quote(query)}")
-
-    # --- 🛡️ CATEGORIA: MODERATION ---
-
-    @b.command()
-    async def kick(ctx, member: discord.Member, *, reason="Fără motiv"):
-        await ctx.message.delete()
-        try: await member.kick(reason=reason); await ctx.send(f"✅ {member} a primit kick.")
-        except: await ctx.send("❌ Lipsă permisiuni!")
-
-    @b.command()
-    async def ban(ctx, member: discord.Member, *, reason="Fără motiv"):
-        await ctx.message.delete()
-        try: await member.ban(reason=reason); await ctx.send(f"✅ {member} a primit ban.")
-        except: await ctx.send("❌ Lipsă permisiuni!")
-
-    @b.command()
-    async def unban(ctx, user_id: int):
-        await ctx.message.delete()
-        user = await b.fetch_user(user_id)
-        await ctx.guild.unban(user)
-        await ctx.send(f"✅ {user} a primit unban.")
-
-    @b.command()
-    async def massunban(ctx):
-        await ctx.message.delete()
-        ban_list = await ctx.guild.bans()
-        for entry in ban_list: await ctx.guild.unban(entry.user)
-        await ctx.send("✅ Toți utilizatorii au primit unban.")
-
-    @b.command()
-    async def softban(ctx, member: discord.Member):
-        await ctx.message.delete()
-        await member.ban(); await ctx.guild.unban(member)
-        await ctx.send(f"✅ {member} a primit softban (mesaje șterse).")
-
-    @b.command()
-    async def mute(ctx, member: discord.Member):
-        await ctx.message.delete()
-        role = discord.utils.get(ctx.guild.roles, name="Muted")
-        if not role: role = await ctx.guild.create_role(name="Muted")
-        for channel in ctx.guild.channels: await channel.set_permissions(role, speak=False, send_messages=False)
-        await member.add_roles(role)
-        await ctx.send(f"✅ {member} a primit mute.")
-
-    @b.command()
-    async def unmute(ctx, member: discord.Member):
-        await ctx.message.delete()
-        role = discord.utils.get(ctx.guild.roles, name="Muted")
-        await member.remove_roles(role)
-        await ctx.send(f"✅ {member} a primit unmute.")
-
-    @b.command()
-    async def purge(ctx, amount: int):
-        await ctx.message.delete()
-        await ctx.channel.purge(limit=amount)
-
-    @b.command()
-    async def slowmode(ctx, seconds: int):
-        await ctx.message.delete()
-        await ctx.channel.edit(slowmode_delay=seconds)
-
-    @b.command()
-    async def lock(ctx):
-        await ctx.message.delete()
-        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
-        await ctx.send("🔒 Canal blocat.")
-
-    @b.command()
-    async def unlock(ctx):
-        await ctx.message.delete()
-        await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
-        await ctx.send("🔓 Canal deblocat.")
-
-    @b.command()
-    async def nuke(ctx):
-        await ctx.message.delete()
-        new_channel = await ctx.channel.clone()
-        await ctx.channel.delete()
-        await new_channel.send("☢️ Canal distrus și recreat!")
-
-    @b.command()
-    async def masschannel(ctx, count: int, *, name):
-        await ctx.message.delete()
-        for i in range(count): await ctx.guild.create_text_channel(name)
-
-    @b.command()
-    async def massrole(ctx, count: int, *, name):
-        await ctx.message.delete()
-        for i in range(count): await ctx.guild.create_role(name=name)
-
-    # --- 🎮 CATEGORIA: GAMES & FUN ---
-
-    @b.command()
-    async def meme(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://meme-api.com/gimme").json()
-        await ctx.send(r['url'])
-
-    @b.command()
-    async def joke(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://v2.jokeapi.dev/joke/Any?type=single").json()
-        await ctx.send(f"😂 **Glumă:** {r['joke']}")
-
-    @b.command()
-    async def quote(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://api.quotable.io/random").json()
-        await ctx.send(f"📜 *\"{r['content']}\"* — **{r['author']}**")
-
-    @b.command()
-    async def cat(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://api.thecatapi.com/v1/images/search").json()
-        await ctx.send(r[0]['url'])
-
-    @b.command()
-    async def dog(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://dog.ceo/api/breeds/image/random").json()
-        await ctx.send(r['message'])
-
-    @b.command()
-    async def fact(ctx):
-        await ctx.message.delete()
-        r = requests.get("https://uselessfacts.jsph.pl/random.json?language=en").json()
-        await ctx.send(f"💡 **Știai că?** {r['text']}")
-
-    @b.command()
-    async def howhot(ctx, member: discord.Member = None):
-        await ctx.message.delete()
-        member = member or ctx.author
-        await ctx.send(f"🔥 **{member.name}** este **{random.randint(0, 100)}%** hot!")
-
-    @b.command()
-    async def hug(ctx, member: discord.Member):
-        await ctx.message.delete()
-        await ctx.send(f"🫂 **{ctx.author.name}** l-a îmbrățișat pe **{member.name}**!")
-
-    @b.command()
-    async def slap(ctx, member: discord.Member):
-        await ctx.message.delete()
-        await ctx.send(f"👋 **{ctx.author.name}** i-a tras o palmă lui **{member.name}**!")
-
-    @b.command()
-    async def kill(ctx, member: discord.Member):
-        await ctx.message.delete()
-        await ctx.send(f"💀 **{ctx.author.name}** l-a eliminat pe **{member.name}**!")
-
-    @b.command()
-    async def punch(ctx, member: discord.Member):
-        await ctx.message.delete()
-        await ctx.send(f"👊 **{ctx.author.name}** i-a tras un pumn lui **{member.name}**!")
-
-    @b.command()
-    async def nitro(ctx):
-        await ctx.message.delete()
-        code = "".join(random.choices("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=16))
-        await ctx.send(f"🎁 **Nitro:** discord.gift/{code}")
-
-    @b.command()
-    async def gay(ctx, member: discord.Member = None):
-        await ctx.message.delete()
-        member = member or ctx.author
-        await ctx.send(f"🌈 **{member.name}** este **{random.randint(0, 100)}%** gay!")
-
-    @b.command()
-    async def iq(ctx, member: discord.Member = None):
-        await ctx.message.delete()
-        member = member or ctx.author
-        await ctx.send(f"🧠 **{member.name}** are un IQ de **{random.randint(50, 200)}**!")
-
-    @b.command()
-    async def ship(ctx, u1: discord.Member, u2: discord.Member):
-        await ctx.message.delete()
-        await ctx.send(f"❤️ **Ship:** {u1.name} + {u2.name} = **{random.randint(0, 100)}%** compatibilitate!")
-
-    @b.command()
-    async def slots(ctx):
-        await ctx.message.delete()
-        items = ["🍎", "🍒", "🍇", "💎", "7️⃣"]
-        res = [random.choice(items) for _ in range(3)]
-        msg = " | ".join(res)
-        if res[0] == res[1] == res[2]: await ctx.send(f"🎰 `{msg}`\n✨ **CÂȘTIGĂTOR!**")
-        else: await ctx.send(f"🎰 `{msg}`\n❌ Mai încearcă.")
-
-    @b.command()
-    async def mines(ctx, bombs: int = 5):
-        await ctx.message.delete()
-        grid = ["⬛"] * 25
-        bomb_indices = random.sample(range(25), min(bombs, 24))
-        for i in range(25):
-            if i in bomb_indices: grid[i] = "💣"
-            else: grid[i] = "💎"
-        
-        display = "\n".join(["".join(grid[i:i+5]) for i in range(0, 25, 5)])
-        await ctx.send(f"💣 **MINES GAME** (Bombe: {bombs})\n{display}")
-
-    # --- 🛠️ CATEGORIA: UTILS ---
-
-    @b.command()
-    async def avatar(ctx, member: discord.Member = None):
-        await ctx.message.delete()
-        member = member or ctx.author
-        await ctx.send(member.avatar_url)
-
-    @b.command()
-    async def banner(ctx, member: discord.Member = None):
-        await ctx.message.delete()
-        member = member or ctx.author
-        user = await b.fetch_user(member.id)
-        if user.banner: await ctx.send(user.banner_url)
-        else: await ctx.send("❌ Acest user nu are banner.")
-
-    @b.command()
-    async def qr(ctx, *, text):
-        await ctx.message.delete()
-        await ctx.send(f"https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={quote(text)}")
-
-    @b.command()
-    async def ipinfo(ctx, ip):
-        await ctx.message.delete()
-        r = requests.get(f"https://ipapi.co/{ip}/json/").json()
-        await ctx.send(f"🌐 **IP:** {ip}\n📍 **Oraș:** {r.get('city')}\n🚩 **Țară:** {r.get('country_name')}\n🏢 **ISP:** {r.get('org')}")
-
-    @b.command()
-    async def shorten(ctx, url):
-        await ctx.message.delete()
-        r = requests.get(f"https://is.gd/create.php?format=json&url={url}").json()
-        await ctx.send(f"🔗 **Scurt:** {r['shorturl']}")
-
-    @b.command()
-    async def weather(ctx, *, city):
-        await ctx.message.delete()
-        await ctx.send(f"☁️ **Vremea în {city}:**\nhttps://wttr.in/{quote(city)}?0&m&q")
-
-    @b.command()
-    async def crypto(ctx, coin="bitcoin"):
-        await ctx.message.delete()
-        r = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd").json()
-        await ctx.send(f"💰 **{coin.upper()}:** ${r[coin]['usd']}")
-
-    @b.command()
-    async def math(ctx, *, expr):
-        await ctx.message.delete()
-        try: await ctx.send(f"🔢 **Rezultat:** `{eval(expr)}`")
-        except: await ctx.send("❌ Expresie invalidă.")
-
-    @b.command()
-    async def binary(ctx, *, text):
-        await ctx.message.delete()
-        res = ' '.join(format(ord(x), '08b') for x in text)
-        await ctx.send(f"🔢 **Binary:** `{res[:1900]}`")
-
-    @b.command()
-    async def hex(ctx, *, text):
-        await ctx.message.delete()
-        res = text.encode().hex()
-        await ctx.send(f"🔢 **Hex:** `{res[:1900]}`")
-
-    @b.command()
-    async def morse(ctx, *, text):
-        await ctx.message.delete()
-        MORSE_DICT = {'A':'.-','B':'-...','C':'-.-.','D':'-..','E':'.','F':'..-.','G':'--.','H':'....','I':'..','J':'.---','K':'-.-','L':'.-..','M':'--','N':'-.','O':'---','P':'.--.','Q':'--.-','R':'.-.','S':'...','T':'-','U':'..-','V':'...-','W':'.--','X':'-..-','Y':'-.--','Z':'--..',' ':'/'}
-        res = ' '.join(MORSE_DICT.get(c.upper(), '') for c in text)
-        await ctx.send(f"📟 **Morse:** `{res[:1900]}`")
-
-    @b.command(name="64")
-    async def base64_cmd(ctx, *, text):
-        await ctx.message.delete()
-        import base64
-        res = base64.b64encode(text.encode()).decode()
-        await ctx.send(f"🔢 **Base64:** `{res[:1900]}`")
-
-    @b.command()
-    async def bold(ctx, *, text):
-        await ctx.message.delete(); await ctx.send(f"**{text}**")
-
-    @b.command()
-    async def italic(ctx, *, text):
-        await ctx.message.delete(); await ctx.send(f"*{text}*")
-
-    # --- ✨ CATEGORIA: STATUS ---
-
-    @b.command()
-    async def stats(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Game(name=text))
-
-    @b.command()
-    async def live(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/redglitch"))
-
-    @b.command()
-    async def afk(ctx, *, reason="Pauză"):
-        await ctx.message.delete()
-        await ctx.send(f"💤 **AFK:** {reason}")
-
-    @b.command()
-    async def remstats(ctx):
-        await ctx.message.delete()
-        await b.change_presence(activity=None)
-
-    @b.command()
-    async def watching(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=text))
-
-    @b.command()
-    async def listening(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name=text))
-
-    @b.command()
-    async def playing(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Game(name=text))
-
-    @b.command()
-    async def ping(ctx):
-        await ctx.message.delete()
-        await ctx.send(f"🏓 **Pong!** `{round(b.latency * 1000)}ms`")
-
-    @b.command()
-    async def uptime(ctx):
-        await ctx.message.delete()
-        delta = str(datetime.timedelta(seconds=int(time.time() - START_TIME)))
-        await ctx.send(f"🚀 **Uptime Cont:** `{delta}`")
-
-    @b.command()
-    async def typing(ctx, seconds: int):
-        await ctx.message.delete()
-        async with ctx.typing(): await asyncio.sleep(seconds)
-
-    @b.command()
-    async def restartstats(ctx):
-        await ctx.message.delete()
-        global START_TIME; START_TIME = time.time()
-        await ctx.send("✅ **Statisticile au fost resetate!**", delete_after=5)
-
-    # --- 🚀 CATEGORIA: ADVANCED ---
-
-    @b.command()
-    async def steal(ctx, emoji: discord.PartialEmoji):
-        await ctx.message.delete()
-        r = requests.get(emoji.url)
-        new_emoji = await ctx.guild.create_custom_emoji(name=emoji.name, image=r.content)
-        await ctx.send(f"✅ Emoji furat: {new_emoji}")
-
-    @b.command()
-    async def urban(ctx, *, word):
-        await ctx.message.delete()
-        r = requests.get(f"https://api.urbandictionary.com/v0/define?term={word}").json()
-        await ctx.send(f"📖 **Urban:** {r['list'][0]['definition'][:500]}")
-
-    @b.command()
-    async def timer(ctx, seconds: int, *, reason="Timpul a expirat!"):
-        await ctx.message.delete()
-        await ctx.send(f"⏰ Cronometru setat: `{seconds}s`")
-        await asyncio.sleep(seconds)
-        await ctx.send(f"🔔 **{ctx.author.mention}**: {reason}")
-
-    @b.command()
-    async def purgeuser(ctx, member: discord.Member, amount: int = 100):
-        await ctx.message.delete()
-        def check(m): return m.author == member
-        await ctx.channel.purge(limit=amount, check=check)
-
-    @b.command()
-    async def servericon(ctx):
-        await ctx.message.delete()
-        await ctx.send(ctx.guild.icon_url)
-
-    @b.command()
-    async def serverbanner(ctx):
-        await ctx.message.delete()
-        await ctx.send(ctx.guild.banner_url)
-
-    @b.command()
-    async def ghostping(ctx, member: discord.Member):
-        await ctx.message.delete()
-        msg = await ctx.send(member.mention)
-        await msg.delete()
-
-    @b.command()
-    async def secret(ctx, *, text):
-        await ctx.message.delete()
-        await ctx.send(f"||{text}||")
-
-    @b.command()
-    async def nick(ctx, *, name):
-        await ctx.message.delete()
-        await ctx.author.edit(nick=name)
-
-    @b.command()
-    async def hypesquad(ctx, house):
-        await ctx.message.delete()
-  
+@bot.command()
+async def hT7(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
+🔥 ・ TIER 7 (EXTREME):
+☢️ ・ $spam [nr] [msg]- Spam mesaje rapid
+👻 ・ $ghostspam [nr]- Spam cu ștergere instantă
+🧨 ・ $delchannels   - Șterge TOATE canalele
+🧨 ・ $delroles      - Șterge TOATE rolurile
+☣️ ・ $masskick      - Kick la TOȚI membrii
+🧬 ・ $checktoken    - Info complete cont (API)
+📜 ・ $logall        - Salvează ultimele 100 msje
+```""", delete_after=60)
+
+# ==========================================
+# --- 🤖 IMPLEMENTARE AI & INTELLIGENCE ---
+# ==========================================
+
+@bot.command()
+async def ai(ctx, *, prompt):
+    await ctx.message.delete()
+    if GEMINI_API_KEY == "CHEIA_GEMINI_AICI": return await ctx.send("❌ Pune API Key Gemini!")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    try:
+        r = requests.post(url, json={"contents": [{"parts": [{"text": prompt}]}]}).json()
+        await ctx.send(f"🤖 **Gemini AI:** {r['candidates'][0]['content']['parts'][0]['text'][:1900]}")
+    except: await ctx.send("❌ Eroare API Gemini.")
+
+@bot.command()
+async def genimg(ctx, *, q):
+    await ctx.message.delete()
+    await ctx.send(f"🎨 **Genereat:** https://pollinations.ai/p/{q.replace(' ', '%20')}")
+
+@bot.command()
+async def brain(ctx, *, q):
+    await ctx.message.delete()
+    r = requests.get(f"https://api.duckduckgo.com/?q={q}&format=json").json()
+    await ctx.send(f"🧠 **Brain:** {r.get('AbstractText', 'Nu știu asta.')[:1000]}")
+
+@bot.command()
+async def google(ctx, *, q):
+    await ctx.message.delete()
+    await ctx.send(f"🔍 https://www.google.com/search?q={q.replace(' ', '+')}")
+
+@bot.command()
+async def ytsearch(ctx, *, q):
+    await ctx.message.delete()
+    await ctx.send(f"🎥 https://www.youtube.com/results?search_query={q.replace(' ', '+')}")
+
+@bot.command()
+async def wiki(ctx, *, q):
+    await ctx.message.delete()
+    await ctx.send(f"📖 https://en.wikipedia.org/wiki/{q.replace(' ', '_')}")
+
+# ==========================================
+# --- 🛡️ IMPLEMENTARE MODERARE ---
+# ==========================================
+
+@bot.command()
+async def kick(ctx, member: discord.Member):
+    await ctx.message.delete()
+    await member.kick()
+
+@bot.command()
+async def ban(ctx, member: discord.Member):
+    await ctx.message.delete()
+    await member.ban()
+
+@bot.command()
+async def unban(ctx, user_id: int):
+    await ctx.message.delete()
+    user = await bot.fetch_user(user_id)
+    await ctx.guild.unban(user)
+
+@bot.command()
+async def massunban(ctx):
+    await ctx.message.delete()
+    bans = await ctx.guild.bans()
+    for b in bans: await ctx.guild.unban(b.user)
+
+@bot.command()
+async def softban(ctx, member: discord.Member):
+    await ctx.message.delete()
+    await member.ban(delete_message_days=7)
+    await ctx.guild.unban(member)
+
+@bot.command()
+async def purge(ctx, amount: int):
+    await ctx.message.delete()
+    async for m in ctx.channel.history(limit=amount):
+        if m.author == bot.user: await m.delete()
+
+@bot.command()
+async def nuke(ctx):
+    await ctx.message.delete()
+    new = await ctx.channel.clone()
+    await ctx.channel.delete()
+    await new.send("💥 **Canal Nuked!**")
+
+@bot.command()
+async def masschannel(ctx):
+    await ctx.message.delete()
+    for i in range(10): await ctx.guild.create_text_channel(name=f"red-bot-{i}")
+
+@bot.command()
+async def massrole(ctx):
+    await ctx.message.delete()
+    for i in range(10): await ctx.guild.create_role(name=f"RedRole-{i}")
+
+@bot.command()
+async def lock(ctx):
+    await ctx.message.delete()
+    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=False)
+
+@bot.command()
+async def unlock(ctx):
+    await ctx.message.delete()
+    await ctx.channel.set_permissions(ctx.guild.default_role, send_messages=True)
+
+# ==========================================
+# --- 🎮 IMPLEMENTARE GAMES & FUN ---
+# ==========================================
+
+@bot.command()
+async def meme(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://meme-api.com/gimme").json()
+    await ctx.send(r['url'])
+
+@bot.command()
+async def joke(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://v2.jokeapi.dev/joke/Any?type=single").json()
+    await ctx.send(f"🤡 {r.get('joke', 'N-am glume azi.')}")
+
+@bot.command()
+async def fact(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://uselessfacts.jsph.pl/random.json?language=en").json()
+    await ctx.send(f"💡 {r['text']}")
+
+@bot.command()
+async def cat(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://api.thecatapi.com/v1/images/search").json()
+    await ctx.send(r[0]['url'])
+
+@bot.command()
+async def dog(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://dog.ceo/api/breeds/image/random").json()
+    await ctx.send(r['message'])
+
+@bot.command()
+async def mines(ctx, bombs: int = 5):
+    await ctx.message.delete()
+    grid = ["⬛"] * 25
+    for _ in range(bombs): grid[random.randint(0, 24)] = "💣"
+    res = "".join(grid[i] + ("\n" if (i+1)%5==0 else " ") for i in range(25))
+    await ctx.send(f"💣 **Mines:**\n{res}")
+
+@bot.command()
+async def slots(ctx):
+    await ctx.message.delete()
+    a,b,c = random.choices("🍎💎🍒🍋🍀", k=3)
+    res = "🎉 WIN!" if a==b==c else "💀 LOSE."
+    await ctx.send(f"🎰 **[ {a} | {b} | {c} ]**\n{res}")
+
+@bot.command()
+async def iq(ctx, member: discord.Member = None):
+    await ctx.message.delete()
+    member = member or ctx.author
+    await ctx.send(f"🧠 **{member.name}** are IQ-ul: `{random.randint(50, 160)}`")
+
+@bot.command()
+async def nitro(ctx):
+    await ctx.message.delete()
+    code = "".join(random.choices("ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789", k=16))
+    await ctx.send(f"🎁 https://discord.gift/{code}")
+
+# ==========================================
+# --- 🛠️ IMPLEMENTARE UTILS ---
+# ==========================================
+
+@bot.command()
+async def avatar(ctx, member: discord.Member = None):
+    await ctx.message.delete()
+    member = member or ctx.author
+    await ctx.send(member.avatar_url)
+
+@bot.command()
+async def weather(ctx, city):
+    await ctx.message.delete()
+    await ctx.send(f"🌡️ https://wttr.in/{city}.png?m")
+
+@bot.command()
+async def crypto(ctx, coin):
+    await ctx.message.delete()
+    r = requests.get(f"https://api.coingecko.com/api/v3/simple/price?ids={coin}&vs_currencies=usd").json()
+    await ctx.send(f"🪙 **{coin.upper()}:** ${r.get(coin.lower(), {}).get('usd', 'N/A')}")
+
+@bot.command()
+async def binary(ctx, *, text):
+    await ctx.message.delete()
+    await ctx.send(f"📟 `{' '.join(format(ord(x), '08b') for x in text)}`")
+
+@bot.command()
+async def math(ctx, *, expr):
+    await ctx.message.delete()
+    try: await ctx.send(f"🔢 Result: `{eval(expr)}`")
+    except: await ctx.send("❌ Error")
+
+# ==========================================
+# --- ✨ IMPLEMENTARE STATUS ---
+# ==========================================
+
+@bot.command()
+async def live(ctx, *, text):
+    await ctx.message.delete()
+    await bot.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/monstercat"))
+
+@bot.command()
+async def playing(ctx, *, text):
+    await ctx.message.delete()
+    await bot.change_presence(activity=discord.Game(name=text))
+
+@bot.command()
+async def remstats(ctx):
+    await ctx.message.delete()
+    await bot.change_presence(activity=None)
+
+@bot.command()
+async def typing(ctx, seconds: int):
+    await ctx.message.delete()
+    async with ctx.typing(): await asyncio.sleep(seconds)
+
+# ==========================================
+# --- 🔥 IMPLEMENTARE T7 (EXTREME) ---
+# ==========================================
+
+@bot.command()
+async def spam(ctx, count: int, *, text):
+    await ctx.message.delete()
+    for _ in range(count): await ctx.send(text); await asyncio.sleep(0.4)
+
+@bot.command()
+async def ghostspam(ctx, count: int):
+    await ctx.message.delete()
+    for _ in range(count):
+        m = await ctx.send("👻 GHOST"); await m.delete()
+
+@bot.command()
+async def delchannels(ctx):
+    await ctx.message.delete()
+    for c in ctx.guild.channels:
+        try: await c.delete()
+        except: pass
+
+@bot.command()
+async def masskick(ctx):
+    await ctx.message.delete()
+    for m in ctx.guild.members:
+        try: await m.kick()
+        except: pass
+
+@bot.command()
+async def checktoken(ctx):
+    await ctx.message.delete()
+    r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": TOKEN_PRINCIPAL}).json()
+    await ctx.send(f"```json\n{json.dumps(r, indent=2)}\n```")
+
+# ==========================================
+# --- 🚀 IMPLEMENTARE ADVANCED ---
+# ==========================================
+
+@bot.command()
+async def ghostping(ctx, member: discord.Member):
+    await ctx.message.delete()
+    m = await ctx.send(member.mention); await m.delete()
+
+@bot.command()
+async def showtoken(ctx):
+    await ctx.message.delete()
+    try: await ctx.author.send(f"🔑 **Token:** `{TOKEN_PRINCIPAL}`")
+    except: await ctx.send("❌ DM Closed")
+
+@bot.command()
+async def hypesquad(ctx, house):
+    await ctx.message.delete()
+    h_ids = {"bravery": 1, "brilliance": 2, "balance": 3}
+    requests.post("https://discord.com/api/v9/hypesquad/online", headers={"Authorization": TOKEN_PRINCIPAL}, json={"house_id": h_ids.get(house.lower(), 1)})
+
+# --- RUN ---
+bot.run(TOKEN_PRINCIPAL)
