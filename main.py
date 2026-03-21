@@ -552,43 +552,57 @@ def setup_bot(b):
     @b.event
     async def on_ready(): print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
 
+
 # --- RUN ---
 def run_health_server():
     from http.server import BaseHTTPRequestHandler, HTTPServer
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b"OK")
+            self.send_response(200); self.send_header('Content-type', 'text/plain'); self.end_headers(); self.wfile.write(b"OK")
         def log_message(self, format, *args): return
     port = int(os.environ.get("PORT", 10000))
     try:
         server = HTTPServer(('0.0.0.0', port), HealthHandler)
+        print(f"📡 Health check server pornit pe portul {port}")
         server.serve_forever()
-    except: pass
+    except Exception as e: print(f"❌ Eroare server health: {e}")
 
+# --- MAIN RUN ---
 async def main_run():
-    tokens = []
-    if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r", encoding="utf-8") as f: tokens = [l.strip() for l in f.readlines() if l.strip()]
-    if not tokens: tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
-    if not tokens: return print("❌ CRITIC: Nu am găsit niciun token!")
-    for i, token in enumerate(tokens):
-        name = f"MainBot_{i}"
-        try:
+    print("🎬 Inițiez main_run...")
+    try:
+        tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
+        if os.path.exists("tokens.txt"):
+            with open("tokens.txt", "r", encoding="utf-8") as f:
+                tokens = [line.strip() for line in f.readlines() if line.strip()]
+        
+        if not tokens:
+            print("❌ CRITIC: Nu am găsit niciun token!")
+            return
+
+        for i, token in enumerate(tokens):
+            name = f"MainBot_{i}"
             new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-            setup_bot(new_bot)
-            selfbots[name] = {"token": token, "bot": new_bot}
-            async def safe_start(bot, t):
-                try: await bot.start(t)
-                except: pass
-            asyncio.create_task(safe_start(new_bot, token))
+            setup_bot(new_bot); selfbots[name] = {"token": token, "bot": new_bot}
+            async def safe_start(b, t, idx):
+                try: await b.start(t)
+                except Exception as e: print(f"❌ EROARE la contul {idx+1}: {e}")
+            asyncio.create_task(safe_start(new_bot, token, i))
             await asyncio.sleep(2.0)
-        except: pass
-    while True: await asyncio.sleep(3600)
+
+        print("✅ Toate task-urile au fost create.")
+        count = 0
+        while True:
+            await asyncio.sleep(600)
+            count += 10
+            print(f"⏰ Keep-alive: {count} min. Conturi: {len(selfbots)}")
+            
+    except Exception as e:
+        print(f"❌ EROARE FATALĂ: {e}")
 
 if __name__ == "__main__":
     threading.Thread(target=run_health_server, daemon=True).start()
+    print("🚀 Pornesc bucla principală asyncio...")
     try: asyncio.run(main_run())
     except KeyboardInterrupt: print("🛑 Oprire.")
+    except Exception as e: print(f"❌ Eroare: {e}")
