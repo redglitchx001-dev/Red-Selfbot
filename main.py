@@ -562,20 +562,34 @@ $adfiles        - Salvează MP3 din atașament
         # ACEASTĂ LINIE FACE COMENZILE SĂ MEARGĂ ($ai, $purge, etc.)
         await bot.process_commands(m)
 
-# Finalul funcției setup_bot
+@bot.event
+    async def on_message(m):
+        if m.author != bot.user:
+            if bot_state["afk"] and bot.user.mentioned_in(m):
+                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
+            return
+        if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
+            bot_state["afk"] = None
+            await m.channel.send("👋 AFK dezactivat.", delete_after=3)
+        await bot.process_commands(m)
+
     @bot.event
     async def on_ready():
         active_selfbots[str(bot.user.id)] = bot
         print(f"✅ BOT ACTIV: {bot.user}")
 
-f: tokens += [line.strip() for line in f.readlines() if line.strip()]
+# --- LOGICA DE PORNIRE (EXACT SUB setup_bot) ---
+async def main_run():
+    tokens = [TOKEN_PRINCIPAL]
+    if os.path.exists("tokens.txt"):
+        with open("tokens.txt", "r") as f:
+            tokens += [line.strip() for line in f.readlines() if line.strip()]
     
     tokens = list(set(tokens))
     print(f"🎬 Pornesc {len(tokens)} conturi...")
 
     for token in tokens:
         try:
-            # NB: auto_reconnect=True ajută pe Render
             nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
             setup_bot(nb)
             asyncio.create_task(nb.start(token))
@@ -604,15 +618,11 @@ def run_health_server():
     except Exception as e:
         print(f"❌ Serverul de port nu a putut porni: {e}")
 
-# === [ PORNIRE EXECUTABILĂ ] ===
 if __name__ == "__main__":
-    # Pornim serverul de port ca să nu dea Render shutdown
     run_health_server()
-    
     try:
-        # Pornim bucla principală
         asyncio.run(main_run())
     except KeyboardInterrupt:
         print("🛑 Oprire manuală.")
     except Exception as e:
-        print(f"❌ Eroare fatală la rulare: {e}")
+        print(f"❌ Eroare fatală: {e}")
