@@ -37,7 +37,7 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTQ3MjU2MzE4ODMyNjQ2OTcxOA.GMqL3K.HDGSbjK79pmD_QZJj8XYcAwCB450RYxAdeuUYE,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow,MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G962Nn.mb1BYtrVO_jO_G4_TWek3NC4tcgpewULGeFR3c,MTE3Nzg5NTA4NTU4NTc0Nzk4OQ.GiJA5e.9Pm_uGMpiHc5K7yJlh19uCkCGe2AdamTUaGjso")
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GyG-VN.L1YCIb-y7pDldtqsWNXQIr2x2lMxIMtUO5SVyg")
 PREFIX = "$"
 
 # Creare structură foldere
@@ -517,29 +517,24 @@ def setup_bot(b):
             lista = "\n".join([f"🔹 **{n}**" for n in selfbots.keys()])
             await ctx.send(f"🤖 **CONTURI ACTIVE:**\n{lista}", delete_after=15)
 
-    @b.command()
-    async def selfbotr(ctx, name: str):
-        """Șterge un cont din rețea - DOAR OWNER"""
-        if ctx.author.id != OWNER_ID:
-            return
-
+      @b.command()
+    async def selfbot(ctx, token=None, name=None):
         await ctx.message.delete()
-        if name in selfbots:
-            try:
-                if "bot" in selfbots[name]:
-                    await selfbots[name]["bot"].close()
-                del selfbots[name]
-                await ctx.send(f"🗑️ Contul `{name}` a fost deconectat și eliminat.", delete_after=5)
-            except Exception as e:
-                await ctx.send(f"❌ Eroare la oprire: {e}", delete_after=5)
-        else:
-            await ctx.send(f"❌ Contul `{name}` nu a fost găsit.", delete_after=5)
-
+        if token and name:
+            selfbots[name] = {"token": token}
+            async def start_new_bot(t, n):
+                new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+                setup_bot(new_bot); selfbots[n]["bot"] = new_bot
+                try: await new_bot.start(t)
+                except: 
+                    if n in selfbots: del selfbots[n]
+            asyncio.create_task(start_new_bot(token, name))
+            await ctx.send(f"🤖 Adăugat: `{name}`", delete_after=5)
+        else: await ctx.send(f"🤖 **Active:** {list(selfbots.keys())}", delete_after=10)
 
     @b.event
     async def on_message_delete(m):
         if m.author != b.user: snipe_data[m.channel.id] = f"🎯 **{m.author}**: {m.content}"
-
     @b.event
     async def on_message(m):
         nonlocal afk_reason, log_chat_active, log_dm_active
