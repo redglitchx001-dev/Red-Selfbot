@@ -1,5 +1,5 @@
 discord.py-self==1.9.2
 requests
-PyNaCl
+FFmpeg
 legacy-cgi
 audioop-lts
