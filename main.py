@@ -80,9 +80,9 @@ $plays [nr]    - Pornește piesa cu numărul X
 $stops         - Oprește muzica și ieși din canal
 
 ✉️ ・ SPAM BOT:
-$spam @user    - Începe spam-ul din botjura.txt
+$start @user    - Începe spam-ul din botjura.txt
 $stop          - Oprește procesul de spam
-$repeat [m][n][d] - Repetă text de X ori cu delay
+$spam [m][n][d] - Repetă text de X ori cu delay
 
 👤 ・ PROFILE ARCHIVER:
 $prfdwn @user  - Descarcă profilul în /profiles
@@ -202,30 +202,68 @@ $adfiles         - Upload MP3 (atașament)
         lista = "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) if files else "Niciun fișier."
         await ctx.send(f"🎵 **Librărie:**\n```\n{lista}\n```", delete_after=20)
 
+    # --- ✉️ MODULUL SPAM (ACCESIBIL TUTUROR) ---
+
     @b.command()
-    async def spam(ctx, user: discord.Member = None):
-        nonlocal spamming
+    async def start(ctx, user: discord.Member = None):
+        """Oricine poate porni spam-ul din botjura.txt"""
         await ctx.message.delete()
-        spamming = True
-        if not os.path.exists("botjura.txt"):
-            with open("botjura.txt", "w", encoding="utf-8") as f: f.write("RED-SELFBOT ON TOP\n")
-        with open("botjura.txt", "r", encoding="utf-8") as f:
+        
+        state["spamming"] = True
+        file_path = "botjura.txt"
+        
+        if not os.path.exists(file_path):
+            with open(file_path, "w", encoding="utf-8") as f:
+                f.write("RED-SELFBOT PE FELIE\nLIL BRO E JOS\n")
+        
+        with open(file_path, "r", encoding="utf-8") as f:
             lines = [l.strip() for l in f.readlines() if l.strip()]
-        while spamming:
-            for l in lines:
-                if not spamming: break
-                await ctx.send(f"{user.mention if user else ''} {l}")
+        
+        if not lines:
+            state["spamming"] = False
+            return await ctx.send("❌ Fișierul `botjura.txt` e gol!", delete_after=5)
+
+        await ctx.send(f"🚀 **Spam pornit de {ctx.author.name}!**", delete_after=1)
+
+        while state["spamming"]:
+            for line in lines:
+                if not state["spamming"]: break
+                msg = f"{user.mention} {line}" if user else line
+                try:
+                    await ctx.send(msg)
+                except:
+                    state["spamming"] = False
+                    break
                 await asyncio.sleep(0.8)
 
     @b.command()
     async def stop(ctx):
-        nonlocal spamming
-        spamming = False
+        """Oricine poate opri spam-ul"""
         await ctx.message.delete()
-        await ctx.send("🛑 Spam oprit.", delete_after=3)
+        state["spamming"] = False
+        await ctx.send(f"🛑 **Spam oprit de {ctx.author.name}.**", delete_after=1)
+
+    # --- 🔒 ADMIN JURA (DOAR PENTRU TINE - ID FIX) ---
 
     @b.command()
-    async def repeat(ctx, msg: str, count: int, delay: float = 0.5):
+    async def addline(ctx, *, text: str):
+        """DOAR TU (OWNER_ID) poți adăuga linii noi"""
+        # Verificăm dacă cel care scrie ești TU
+        if ctx.author.id != 1472112300344479765:
+            # Dacă nu ești tu, botul ignoră comanda sau trimite un mesaj discret
+            return print(f"⚠️ {ctx.author.name} a încercat să adauge o linie, dar a fost respins.")
+
+        await ctx.message.delete()
+        try:
+            with open("botjura.txt", "a", encoding="utf-8") as f:
+                f.write(f"{text}\n")
+            await ctx.send(f"✅ **Linie adăugată de Owner:** `{text}`", delete_after=5)
+        except Exception as e:
+            await ctx.send(f"❌ Eroare: {e}", delete_after=5)
+
+
+    @b.command()
+    async def spam(ctx, msg: str, count: int, delay: float = 0.5):
         await ctx.message.delete()
         for _ in range(count):
             await ctx.send(msg)
