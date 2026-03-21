@@ -1,10 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 import types
-import os
 import asyncio
 import json
-import threading
 import shutil
 import requests
 import datetime
@@ -12,47 +10,41 @@ import random
 import time
 import platform
 import re
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import threading
+import os
 
-print("🚀 SCRIPTUL A PORNIT! Se aplică patch-urile interne...")
-
-# === [ PATCH INTERN - REPARĂ EROAREA CGI ȘI AUDIOOP ] ===
-def patch_modules():
-    # Cream un modul CGI fals
+# === [ PATCH-URI INTERNE PENTRU COMPATIBILITATE ] ===
+def apply_patches():
     if 'cgi' not in sys.modules:
         cgi_mock = types.ModuleType('cgi')
-        cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;") if quote else s
+        cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
         cgi_mock.parse_header = lambda x: (x, {})
         sys.modules['cgi'] = cgi_mock
-        print("✅ Patch CGI aplicat.")
-
-    # Cream un modul AUDIOOP fals
     if 'audioop' not in sys.modules:
         audioop_mock = types.ModuleType('audioop')
         audioop_mock.error = Exception
         dummy = lambda *args, **kwargs: b''
-        audioop_mock.mul = audioop_mock.add = audioop_mock.bias = dummy
-        audioop_mock.reverse = audioop_mock.lin2lin = dummy
+        for f in ['mul', 'add', 'bias', 'reverse', 'lin2lin']: setattr(audioop_mock, f, dummy)
         audioop_mock.ratecv = lambda *args, **kwargs: (b'', None)
         sys.modules['audioop'] = audioop_mock
-        print("✅ Patch AUDIOOP aplicat.")
 
-patch_modules()
+apply_patches()
 
-# ABIA ACUM IMPORȚI DISCORD
 import discord
 from discord.ext import commands
 
 # --- CONFIGURARE ---
+# ATENȚIE: Nu partaja token-urile public!
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
 START_TIME = time.time()
+active_selfbots = {}
 
-# Foldere
+# Foldere necesare
 for f in ["music", "profiles", "clones", "archives", "logs"]:
     if not os.path.exists(f): os.makedirs(f)
-
-active_selfbots = {} # Dicționar global pentru comenzi multi-account
 
 def setup_bot(bot):
     # State per instanță
@@ -61,8 +53,8 @@ def setup_bot(bot):
         "snipe": {},
         "spamming": False,
         "logs_chat": False,
-        "logs_dm": False
-    }
+        "logs_dm": False,
+        "last_msg": None
 
     # ==========================================
     # --- 📋 TOATE CELE 11 MENIURI HELP ---
@@ -566,40 +558,52 @@ $adfiles        - Salvează MP3 din atașament
             if count >= amount: break
 
 
+# === [ LOGICA DE READY ] ===
+    @bot.event
+    async def on_ready():
+        active_selfbots[str(bot.user.id)] = bot
+        print(f"✅ BOT ACTIV: {bot.user}")
 
-# --- 🏃 PORNIRE MULTI-ACCOUNT ---
-async def main_run():
-    print("🎬 Funcția main_run() a început să ruleze...") # ADAUGĂ ASTA
-    
-    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
-    if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r") as f: 
-            tokens += [l.strip() for l in f.readlines() if l.strip()]
-    
-    tokens = list(set(tokens))
-    print(f"📡 Am detectat {len(tokens)} token-uri de procesat.") # ADAUGĂ ASTA
+# === [ SERVER HTTP PENTRU RENDER (KEEP-ALIVE) ] ===
+def run_health_server():
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"OK")
+        def log_message(self, format, *args): return
 
-    for i, token in enumerate(tokens):
-        try:
-            print(f"🔄 Încerc pornirea contului {i+1}/{len(tokens)}...") # ADAUGĂ ASTA
-            nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-            setup_bot(nb)
-            asyncio.create_task(nb.start(token))
-            print(f"✅ Task de login creat pentru contul {i+1}.") # ADAUGĂ ASTA
-            await asyncio.sleep(2)
-        except Exception as e: 
-            print(f"❌ EROARE la pornirea token-ului {i+1}: {e}")
+    port = int(os.environ.get("PORT", 10000))
+    try:
+        server = HTTPServer(('0.0.0.0', port), HealthHandler)
+        print(f"📡 Render Health Server pornit pe portul {port}")
+        server.serve_forever()
+    except Exception as e:
+        print(f"❌ Eroare Server HTTP: {e}")
 
-    print("⏳ Toate conturile au primit comandă de pornire. Intru în bucla de menținere...") # ADAUGĂ ASTA
-    while True: 
-        await asyncio.sleep(3600)
+# === [ SERVER PENTRU RENDER ] ===
+def run_health_server():
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"BOT IS ONLINE")
+        def log_message(self, format, *args): return # Nu umple consola cu log-uri de port
 
+    port = int(os.environ.get("PORT", 10000))
+    server = HTTPServer(('0.0.0.0', port), HealthHandler)
+    print(f"📡 Render Port Server pornit pe portul {port}")
+    # Pornim serverul într-un thread separat ca să nu blocheze botul
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+# === [ PORNIRE FINALA ] ===
 if __name__ == "__main__":
-    print("🌍 Inițiez serverul de Health Check și bucla Asyncio...") # ADAUGĂ ASTA
-    threading.Thread(target=run_health_server, daemon=True).start()
+    run_health_server() # Aici activăm portul pentru Render
     try:
         asyncio.run(main_run())
-    except KeyboardInterrupt: 
-        print("🛑 Oprire manuală detectată.")
+    except KeyboardInterrupt:
+        print("🛑 Oprit.")
     except Exception as e:
-        print(f"❌ EROARE FATALĂ la execuție: {e}")
+        print(f"❌ Eroare fatală: {e}")
