@@ -2,7 +2,6 @@
 import sys
 import types
 import os
-import asyncio  # <--- ACEASTA ESTE LINIA CARE LIPSEȘTE
 import json
 import threading
 import shutil
@@ -12,6 +11,10 @@ import random
 import time
 import platform
 import re
+# ... importurile tale ...
+import asyncio
+
+print("🚀 SCRIPTUL A PORNIT! Se inițiază patch-urile...") # ADAUGĂ ASTA AICI
 
 # === [ PATCH-URI PENTRU COMPATIBILITATE PYTHON 3.13 / 3.14 ] ===
 # Acestea repară ModuleNotFoundError: No module named 'cgi' / 'audioop'
@@ -39,7 +42,7 @@ from discord.ext import commands
 
 # ... restul codului tău (TOKEN_PRINCIPAL, setup_bot, etc.)
 # --- ⚙️ CONFIGURARE ---
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G4Aq81.g1mMCVdL2bCL3DQa9m5eq0f0OH6TeocoB5pxgg,MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow")
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
 START_TIME = time.time()
@@ -565,21 +568,37 @@ $adfiles        - Salvează MP3 din atașament
 
 # --- 🏃 PORNIRE MULTI-ACCOUNT ---
 async def main_run():
+    print("🎬 Funcția main_run() a început să ruleze...") # ADAUGĂ ASTA
+    
     tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
     if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r") as f: tokens += [l.strip() for l in f.readlines() if l.strip()]
+        with open("tokens.txt", "r") as f: 
+            tokens += [l.strip() for l in f.readlines() if l.strip()]
     
     tokens = list(set(tokens))
+    print(f"📡 Am detectat {len(tokens)} token-uri de procesat.") # ADAUGĂ ASTA
+
     for i, token in enumerate(tokens):
         try:
+            print(f"🔄 Încerc pornirea contului {i+1}/{len(tokens)}...") # ADAUGĂ ASTA
             nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
             setup_bot(nb)
             asyncio.create_task(nb.start(token))
+            print(f"✅ Task de login creat pentru contul {i+1}.") # ADAUGĂ ASTA
             await asyncio.sleep(2)
-        except: print(f"❌ Token invalid: {token[:20]}...")
-    
-    while True: await asyncio.sleep(3600)
+        except Exception as e: 
+            print(f"❌ EROARE la pornirea token-ului {i+1}: {e}")
+
+    print("⏳ Toate conturile au primit comandă de pornire. Intru în bucla de menținere...") # ADAUGĂ ASTA
+    while True: 
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    try: asyncio.run(main_run())
-    except KeyboardInterrupt: print("🛑 Oprit.")
+    print("🌍 Inițiez serverul de Health Check și bucla Asyncio...") # ADAUGĂ ASTA
+    threading.Thread(target=run_health_server, daemon=True).start()
+    try:
+        asyncio.run(main_run())
+    except KeyboardInterrupt: 
+        print("🛑 Oprire manuală detectată.")
+    except Exception as e:
+        print(f"❌ EROARE FATALĂ la execuție: {e}")
