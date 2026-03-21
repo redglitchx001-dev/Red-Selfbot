@@ -19,6 +19,7 @@ for mod_name in ['cgi', 'audioop']:
 import discord
 from discord.ext import commands
 import os
+import time
 # ... restul codului
 
 # === [ 🛠️ PATCH-URI DE COMPATIBILITATE PENTRU PYTHON 3.13+ ] ===
