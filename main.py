@@ -1,55 +1,43 @@
+# -*- coding: utf-8 -*-
 import sys
 import types
+import os
+import asyncio  # <--- ACEASTA ESTE LINIA CARE LIPSEȘTE
+import json
+import threading
+import shutil
+import requests
+import datetime
+import random
+import time
+import platform
+import re
 
-# PATCH PENTRU PYTHON 3.13 / 3.14
-for mod_name in ['cgi', 'audioop']:
-    if mod_name not in sys.modules:
-        m = types.ModuleType(mod_name)
-        if mod_name == 'cgi':
-            m.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
-            m.parse_header = lambda x: (x, {})
-        elif mod_name == 'audioop':
-            m.error = Exception
-            for func in ['mul', 'add', 'bias', 'reverse', 'lin2lin']:
-                setattr(m, func, lambda *args, **kwargs: b'')
-            m.ratecv = lambda *args, **kwargs: (b'', None)
-        sys.modules[mod_name] = m
+# === [ PATCH-URI PENTRU COMPATIBILITATE PYTHON 3.13 / 3.14 ] ===
+# Acestea repară ModuleNotFoundError: No module named 'cgi' / 'audioop'
+if 'cgi' not in sys.modules:
+    import legacy_cgi
+    sys.modules['cgi'] = legacy_cgi
 
-# ABIA ACUM IMPORȚI DISCORD
+if 'audioop' not in sys.modules:
+    try:
+        import audioop_lts as audioop
+        sys.modules['audioop'] = audioop
+    except ImportError:
+        # Mock de rezervă dacă audioop_lts eșuează
+        audioop_mock = types.ModuleType('audioop')
+        audioop_mock.error = Exception
+        def dummy(*args, **kwargs): return b''
+        audioop_mock.mul = audioop_mock.add = audioop_mock.bias = dummy
+        audioop_mock.reverse = audioop_mock.lin2lin = dummy
+        audioop_mock.ratecv = lambda *args, **kwargs: (b'', None)
+        sys.modules['audioop'] = audioop_mock
+
+# ACUM IMPORȚI DISCORD (după patch-uri)
 import discord
 from discord.ext import commands
-import os
-import time
-# ... restul codului
 
-# === [ 🛠️ PATCH-URI DE COMPATIBILITATE PENTRU PYTHON 3.13+ ] ===
-def apply_patches():
-    class MockCGI:
-        @staticmethod
-        def escape(s, quote=True):
-            s = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-            if quote: s = s.replace('"', "&quot;").replace('\'', "&#x27;")
-            return s
-    sys.modules['cgi'] = MockCGI()
-
-    try:
-        import audioop
-    except ImportError:
-        class MockAudioop: pass
-        sys.modules['audioop'] = MockAudioop()
-
-    try:
-        import discord.settings
-        _old_settings_init = discord.settings.Settings.__init__
-        def _new_settings_init(self, *args, **kwargs):
-            data = kwargs.get('data') or (args[0] if args else None)
-            if data and isinstance(data, dict) and data.get('friend_source_flags') is None:
-                data['friend_source_flags'] = {}
-            _old_settings_init(self, *args, **kwargs)
-        discord.settings.Settings.__init__ = _new_settings_init
-    except: pass
-
-apply_patches()
+# ... restul codului tău (TOKEN_PRINCIPAL, setup_bot, etc.)
 
 # --- ⚙️ CONFIGURARE ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G4Aq81.g1mMCVdL2bCL3DQa9m5eq0f0OH6TeocoB5pxgg,MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow")
