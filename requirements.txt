@@ -2,4 +2,3 @@ git+https://github.com/dolfies/discord.py-self@master
 requests
 FFmpeg
 legacy-cgi
-audioop-lts
