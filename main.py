@@ -2,8 +2,9 @@
 import sys, types, os, asyncio, json, threading, requests, time, random
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# === [ PATCH-URI PENTRU RENDER ] ===
+# === [ PATCH-URI PENTRU RENDER ȘI FIX DISCORD ERROR ] ===
 def apply_patches():
+    # 1. Patch pentru module lipsă (cgi, audioop)
     if 'cgi' not in sys.modules:
         cgi_mock = types.ModuleType('cgi')
         cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -17,10 +18,29 @@ def apply_patches():
         audioop_mock.ratecv = lambda *args, **kwargs: (b'', None)
         sys.modules['audioop'] = audioop_mock
 
+    # 2. FIX PENTRU EROAREA: 'NoneType' object has no attribute 'get'
+    # Importăm discord aici forțat pentru a putea modifica clasa înainte de logare
+    try:
+        import discord.enums
+        original_from_dict = discord.enums.FriendFlags._from_dict
+
+        @classmethod
+        def patched_from_dict(cls, data):
+            if data is None:
+                return cls(0)
+            return original_from_dict(data)
+
+        discord.enums.FriendFlags._from_dict = patched_from_dict
+        print("✅ Patch pentru FriendFlags aplicat cu succes!")
+    except Exception as e:
+        print(f"⚠️ Nu s-a putut aplica patch-ul FriendFlags: {e}")
+
+# Rulăm patch-urile
 apply_patches()
 
 import discord
 from discord.ext import commands
+# ... restul codului tău de aici încolo ...
 
 # --- CONFIGURARE ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
@@ -33,6 +53,17 @@ def setup_bot(bot):
     # State-ul intern al botului
     bot_state = {"afk": None, "snipe": {}, "last_msg": None}
 
+    # --- TOATE COMENZILE (LE PĂSTREZI PE CELE DE JOS) ---
+    # (Aici vin toate @bot.command-urile tale: REDHELP, hAI, hM, etc.)
+    # Le-am lăsat neschimbate, dar asigură-te că sunt în interiorul setup_bot
+    
+    # ... (toate comenzile tale râmân aici) ...
+
+   
+    @bot.event
+    async def on_ready():
+        active_selfbots[str(bot.user.id)] = bot
+        print(f"✅ [ONLINE] Self-bot logat pe: {bot.user}")
     # --- COMENZILE TALE ÎNCEP MAI JOS ---
 
     # ==========================================
@@ -536,38 +567,39 @@ $adfiles        - Salvează MP3 din atașament
                 count += 1
             if count >= amount: break
 
-# ==========================================
-    # --- EVENT-URI (LOGICĂ INTERNĂ) ---
+ # ==========================================
+    # --- EVENIMENTE UNIFICATE (FOARTE IMPORTANT) ---
     # ==========================================
+
+    @bot.event
+    async def on_message(m):
+        # 1. Ignorăm alți boți
+        if m.author.bot:
+            return
+
+        # 2. LOGICA PENTRU AFK (Când cineva te menționează)
+        if bot_state["afk"] and bot.user.mentioned_in(m) and m.author != bot.user:
+            try:
+                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
+            except: pass
+
+        # 3. LOGICA PENTRU TINE (Proprietarul botului)
+        if m.author == bot.user:
+            # Salvăm ultimul mesaj pentru comanda $copy
+            bot_state["last_msg"] = m.content
+            
+            # Dezactivare AFK automată dacă scrii ceva
+            if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
+                bot_state["afk"] = None
+                await m.channel.send("👋 AFK dezactivat pentru că ai trimis un mesaj.", delete_after=3)
+
+            # PROCESARE COMENZI (Doar dacă tu le scrii)
+            await bot.process_commands(m)
 
     @bot.event
     async def on_message_delete(m):
         if m.author != bot.user:
             bot_state["snipe"][m.channel.id] = f"🎯 **{m.author}**: {m.content}"
-
-    @bot.event
-    async def on_message(m):
-        # Dacă nu e mesajul tău, verificăm doar AFK
-        if m.author != bot.user:
-            if bot_state["afk"] and bot.user.mentioned_in(m):
-                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
-            return
-
-        # Salvăm ultimul mesaj pentru comanda $copy
-        bot_state["last_msg"] = m.content
-
-        # Dezactivare AFK la primul mesaj trimis de tine
-        if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
-            bot_state["afk"] = None
-            await m.channel.send("👋 AFK dezactivat.", delete_after=3)
-        
-        # Procesare comenzi
-        await bot.process_commands(m)
-
-    @bot.event
-    async def on_ready():
-        active_selfbots[str(bot.user.id)] = bot
-        print(f"✅ BOT ACTIV: {bot.user}")
 
 # === [ LOGICA DE LANSARE ] ===
 
