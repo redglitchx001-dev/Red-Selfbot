@@ -2,9 +2,8 @@
 import sys, types, os, asyncio, json, threading, requests, time, random
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# === [ PATCH-URI PENTRU RENDER ȘI FIX DISCORD ERROR ] ===
+# === [ 1. PATCH-URI OBLIGATORII ] ===
 def apply_patches():
-    # 1. Patch pentru module lipsă (cgi, audioop)
     if 'cgi' not in sys.modules:
         cgi_mock = types.ModuleType('cgi')
         cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
@@ -18,49 +17,33 @@ def apply_patches():
         audioop_mock.ratecv = lambda *args, **kwargs: (b'', None)
         sys.modules['audioop'] = audioop_mock
 
-    # 2. FIX PENTRU EROAREA: 'NoneType' object has no attribute 'get'
-    # Importăm discord aici forțat pentru a putea modifica clasa înainte de logare
     try:
         import discord.enums
         original_from_dict = discord.enums.FriendFlags._from_dict
-
         @classmethod
         def patched_from_dict(cls, data):
-            if data is None:
-                return cls(0)
-            return original_from_dict(data)
-
+            return original_from_dict(data) if data is not None else cls(0)
         discord.enums.FriendFlags._from_dict = patched_from_dict
-        print("✅ Patch pentru FriendFlags aplicat cu succes!")
+        print("✅ Patch FriendFlags aplicat!")
     except Exception as e:
-        print(f"⚠️ Nu s-a putut aplica patch-ul FriendFlags: {e}")
+        print(f"⚠️ Eroare patch: {e}")
 
-# Rulăm patch-urile
 apply_patches()
 
 import discord
 from discord.ext import commands
-# ... restul codului tău de aici încolo ...
 
-# --- CONFIGURARE ---
+# --- CONFIG ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
-START_TIME = time.time()
 active_selfbots = {}
 
+# --- SETUP BOT ---
 def setup_bot(bot):
-    # State-ul intern al botului
     bot_state = {"afk": None, "snipe": {}, "last_msg": None}
 
-    # --- TOATE COMENZILE (LE PĂSTREZI PE CELE DE JOS) ---
-    # (Aici vin toate @bot.command-urile tale: REDHELP, hAI, hM, etc.)
-    # Le-am lăsat neschimbate, dar asigură-te că sunt în interiorul setup_bot
-    
-    # ... (toate comenzile tale râmân aici) ...
-
-   
-    @bot.event
+@bot.event
     async def on_ready():
         active_selfbots[str(bot.user.id)] = bot
         print(f"✅ [ONLINE] Self-bot logat pe: {bot.user}")
@@ -567,33 +550,44 @@ $adfiles        - Salvează MP3 din atașament
                 count += 1
             if count >= amount: break
 
- # ==========================================
-    # --- EVENIMENTE UNIFICATE (FOARTE IMPORTANT) ---
+    @bot.command()
+    async def sniped(ctx):
+        await ctx.message.delete()
+        res = bot_state["snipe"].get(ctx.channel.id, "❌ Nimic de recuperat.")
+        await ctx.send(res)
+
+    @bot.command()
+    async def afk(ctx, *, reason="Pauză"):
+        await ctx.message.delete()
+        bot_state["afk"] = reason
+        await ctx.send(f"🌙 AFK Activat: `{reason}`", delete_after=5)
+
+    # ==========================================
+    # --- EVENIMENTE (LOGICĂ UNIFICATĂ) ---
     # ==========================================
 
     @bot.event
-    async def on_message(m):
-        # 1. Ignorăm alți boți
-        if m.author.bot:
-            return
+    async def on_ready():
+        active_selfbots[str(bot.user.id)] = bot
+        print(f"🚀 [ONLINE] Cont: {bot.user}")
 
-        # 2. LOGICA PENTRU AFK (Când cineva te menționează)
+    @bot.event
+    async def on_message(m):
+        if m.author.bot: return
+        
+        # AFK Notify
         if bot_state["afk"] and bot.user.mentioned_in(m) and m.author != bot.user:
-            try:
-                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
+            try: await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
             except: pass
 
-        # 3. LOGICA PENTRU TINE (Proprietarul botului)
+        # Procesare comenzi doar dacă TU scrii
         if m.author == bot.user:
-            # Salvăm ultimul mesaj pentru comanda $copy
             bot_state["last_msg"] = m.content
-            
-            # Dezactivare AFK automată dacă scrii ceva
+            # Auto-disable AFK
             if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
                 bot_state["afk"] = None
-                await m.channel.send("👋 AFK dezactivat pentru că ai trimis un mesaj.", delete_after=3)
-
-            # PROCESARE COMENZI (Doar dacă tu le scrii)
+                print("👋 AFK oprit automat.")
+            
             await bot.process_commands(m)
 
     @bot.event
@@ -601,50 +595,38 @@ $adfiles        - Salvează MP3 din atașament
         if m.author != bot.user:
             bot_state["snipe"][m.channel.id] = f"🎯 **{m.author}**: {m.content}"
 
-# === [ LOGICA DE LANSARE ] ===
-
+# === [ LANSARE ] ===
 async def main_run():
-    tokens = [TOKEN_PRINCIPAL]
-    if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r") as f:
-            tokens += [line.strip() for line in f.readlines() if line.strip()]
-    
-    tokens = list(set(tokens))
-    print(f"🎬 Pornesc {len(tokens)} conturi...")
+    token = TOKEN_PRINCIPAL
+    if not token:
+        print("❌ EROARE: Nu am găsit TOKEN!")
+        return
 
-    for token in tokens:
-        try:
-            nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-            setup_bot(nb)
-            asyncio.create_task(nb.start(token))
-            await asyncio.sleep(2)
-        except Exception as e:
-            print(f"❌ Eroare la pornire token: {e}")
+    print(f"📡 Logare pe: {token[:10]}...")
     
-    while True:
-        await asyncio.sleep(3600)
+    # Intents necesare pentru discord.py-self v2.x
+    intents = discord.Intents.default()
+    intents.messages = True
+    intents.message_content = True # FOARTE IMPORTANT pentru self-boți noi
+    
+    bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None, intents=intents)
+    setup_bot(bot)
+
+    try:
+        await bot.start(token)
+    except Exception as e:
+        print(f"❌ EROARE FATALĂ: {e}")
 
 def run_health_server():
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b"SELF-BOT IS ONLINE")
+            self.send_response(200); self.end_headers()
+            self.wfile.write(b"SELF-BOT ACTIVE")
         def log_message(self, format, *args): return
-
     port = int(os.environ.get("PORT", 10000))
-    try:
-        server = HTTPServer(('0.0.0.0', port), HealthHandler)
-        threading.Thread(target=server.serve_forever, daemon=True).start()
-    except:
-        pass
+    server = HTTPServer(('0.0.0.0', port), HealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
 
 if __name__ == "__main__":
     run_health_server()
-    try:
-        asyncio.run(main_run())
-    except KeyboardInterrupt:
-        pass
-    except Exception as e:
-        print(f"❌ Eroare fatală: {e}")
+    asyncio.run(main_run())
