@@ -31,7 +31,7 @@ from discord.ext import commands
 
 # --- CONFIGURARE ---
 # ATENȚIE: Nu partaja token-urile public!
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE,MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G4Aq81.g1mMCVdL2bCL3DQa9m5eq0f0OH6TeocoB5pxgg")
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
 START_TIME = time.time()
@@ -545,24 +545,37 @@ $adfiles        - Salvează MP3 din atașament
                 count += 1
             if count >= amount: break
 
+@bot.event
+    async def on_message(m):
+        # IMPORTANT: Self-botul răspunde doar la mesajele TALE
+        if m.author != bot.user:
+            # Verificăm totuși AFK dacă te menționează cineva
+            if bot_state["afk"] and bot.user.mentioned_in(m):
+                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
+            return
+
+        # DEZACTIVARE AFK dacă scrii tu un mesaj care NU e comanda de afk
+        if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
+            bot_state["afk"] = None
+            await m.channel.send("👋 AFK dezactivat.", delete_after=3)
+
+        # ACEASTĂ LINIE FACE COMENZILE SĂ MEARGĂ ($ai, $purge, etc.)
+        await bot.process_commands(m)
+
 # Finalul funcției setup_bot
     @bot.event
     async def on_ready():
         active_selfbots[str(bot.user.id)] = bot
         print(f"✅ BOT ACTIV: {bot.user}")
 
-# === [ LOGICA DE PORNIRE (NECESARĂ PE RENDER) ] ===
-async def main_run():
-    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
-    if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r") as f:
-            tokens += [line.strip() for line in f.readlines() if line.strip()]
+f: tokens += [line.strip() for line in f.readlines() if line.strip()]
     
     tokens = list(set(tokens))
     print(f"🎬 Pornesc {len(tokens)} conturi...")
 
     for token in tokens:
         try:
+            # NB: auto_reconnect=True ajută pe Render
             nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
             setup_bot(nb)
             asyncio.create_task(nb.start(token))
@@ -573,27 +586,33 @@ async def main_run():
     while True:
         await asyncio.sleep(3600)
 
-# === [ SERVERUL DE PORT PENTRU RENDER ] ===
+# === [ SERVERUL DE PORT PENTRU RENDER (KEEP-ALIVE) ] ===
 def run_health_server():
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b"ONLINE")
+            self.wfile.write(b"SELF-BOT IS ONLINE")
         def log_message(self, format, *args): return
 
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), HealthHandler)
-    print(f"📡 Render Port activ pe {port}")
-    threading.Thread(target=server.serve_forever, daemon=True).start()
-
-# === [ EXECUȚIA ] ===
-if __name__ == "__main__":
-    run_health_server() # Rezolvă eroarea de Port pe Render
     try:
-        asyncio.run(main_run()) # Rezolvă eroarea 'main_run' is not defined
-    except KeyboardInterrupt:
-        print("🛑 Oprit.")
+        server = HTTPServer(('0.0.0.0', port), HealthHandler)
+        print(f"📡 Render Port activ pe {port}")
+        threading.Thread(target=server.serve_forever, daemon=True).start()
     except Exception as e:
-        print(f"❌ Eroare fatală: {e}")
+        print(f"❌ Serverul de port nu a putut porni: {e}")
+
+# === [ PORNIRE EXECUTABILĂ ] ===
+if __name__ == "__main__":
+    # Pornim serverul de port ca să nu dea Render shutdown
+    run_health_server()
+    
+    try:
+        # Pornim bucla principală
+        asyncio.run(main_run())
+    except KeyboardInterrupt:
+        print("🛑 Oprire manuală.")
+    except Exception as e:
+        print(f"❌ Eroare fatală la rulare: {e}")
