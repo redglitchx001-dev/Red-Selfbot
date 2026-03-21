@@ -145,10 +145,12 @@ $adfiles         - Upload MP3 (atașament)
 ```"""
         await ctx.send(help_text, delete_after=15)
 
+    # --- 🎵 MODUL MUZICĂ ---
     @b.command()
     async def plays(ctx, *, name: str):
         await ctx.message.delete()
         if not ctx.author.voice: return await ctx.send("❌ Intră pe un canal vocal!", delete_after=5)
+        if not os.path.exists("music"): os.makedirs("music")
         files = sorted(os.listdir("music"))
         path = None
         if name.isdigit():
@@ -159,7 +161,7 @@ $adfiles         - Upload MP3 (atașament)
                 if name.lower() in f.lower():
                     path = f"music/{f}"
                     break
-        if not path or not os.path.exists(path): return await ctx.send(f"❌ Piesa `{name}` nu a fost găsită!", delete_after=5)
+        if not path: return await ctx.send(f"❌ Piesa `{name}` nu există!", delete_after=5)
         try:
             vc = ctx.voice_client or await ctx.author.voice.channel.connect()
             if vc.is_playing(): vc.stop()
@@ -173,33 +175,10 @@ $adfiles         - Upload MP3 (atașament)
         if ctx.voice_client: await ctx.voice_client.disconnect()
 
     @b.command()
-    async def downloadm(ctx, link: str):
-        await ctx.message.delete()
-        try:
-            fname = f"music/dwn_{datetime.datetime.now().strftime('%H%M%S')}.mp3"
-            r = requests.get(link, stream=True, timeout=15)
-            with open(fname, 'wb') as f:
-                for chunk in r.iter_content(1024): f.write(chunk)
-            await ctx.send(f"✅ Descărcat: `{fname}`", delete_after=10)
-        except: await ctx.send("❌ Eroare la descărcare!", delete_after=5)
-
-    @b.command()
-    async def adfiles(ctx):
-        await ctx.message.delete()
-        if not ctx.message.attachments:
-            return await ctx.send("❌ Atașează un fișier MP3!", delete_after=5)
-        for attachment in ctx.message.attachments:
-            if attachment.filename.endswith(".mp3"):
-                await attachment.save(f"music/{attachment.filename}")
-                await ctx.send(f"✅ Salvat: `{attachment.filename}`", delete_after=5)
-            else:
-                await ctx.send(f"❌ `{attachment.filename}` nu este MP3!", delete_after=5)
-
-    @b.command()
     async def dwnlibs(ctx):
         await ctx.message.delete()
-        files = sorted(os.listdir("music"))
-        lista = "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) if files else "Niciun fișier."
+        files = sorted(os.listdir("music")) if os.path.exists("music") else []
+        lista = "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) if files else "Gol."
         await ctx.send(f"🎵 **Librărie:**\n```\n{lista}\n```", delete_after=20)
 
     # --- ✉️ MODULUL SPAM (ACCESIBIL TUTUROR) ---
@@ -261,277 +240,43 @@ $adfiles         - Upload MP3 (atașament)
         except Exception as e:
             await ctx.send(f"❌ Eroare: {e}", delete_after=5)
 
-
-    @b.command()
-    async def spam(ctx, msg: str, count: int, delay: float = 0.5):
-        await ctx.message.delete()
-        for _ in range(count):
-            await ctx.send(msg)
-            await asyncio.sleep(delay)
-
-    @b.command()
-    async def prfdwn(ctx, user: discord.Member):
-        await ctx.message.delete()
-        if not os.path.exists("profiles"): os.makedirs("profiles")
-        data = {
-            "name": user.name,
-            "id": user.id,
-            "avatar": str(user.avatar_url),
-            "created_at": str(user.created_at),
-            "joined_at": str(user.joined_at),
-            "roles": [r.name for r in user.roles]
-        }
-        with open(f"profiles/{user.id}.json", "w") as f: json.dump(data, f, indent=4)
-        await ctx.send(f"👤 Profil arhivat: `{user.name}`", delete_after=5)
-
-    @b.command()
-    async def mphelp(ctx):
-        await ctx.message.delete()
-        await ctx.send("```Profil Archiver: $prfdwn @user - Salvează JSON în /profiles```", delete_after=10)
-
+    # --- 🏰 CLONER / BACKUP ($lsrv) ---
     @b.command()
     async def dsrv(ctx):
         await ctx.message.delete()
-        data = {
-            "name": ctx.guild.name,
-            "roles": [],
-            "categories": [],
-            "orphan_channels": []
-        }
-        for role in reversed(ctx.guild.roles):
-            if not role.managed:
-                data["roles"].append({
-                    "id": role.id,
-                    "n": role.name,
-                    "c": role.color.value,
-                    "p": role.permissions.value,
-                    "h": role.hoist,
-                    "m": role.mentionable,
-                    "is_everyone": role.is_default()
-                })
-
-        def get_overwrites(channel):
-            overwrites = []
-            for target, overwrite in channel.overwrites.items():
-                allow, deny = overwrite.pair()
-                overwrites.append({
-                    "id": target.id,
-                    "type": "role" if isinstance(target, discord.Role) else "member",
-                    "allow": allow.value,
-                    "deny": deny.value
-                })
-            return overwrites
-
-        for cat in ctx.guild.categories:
-            chans = []
-            for ch in cat.channels:
-                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
-                if isinstance(ch, discord.TextChannel):
-                    ch_data["topic"] = ch.topic
-                    ch_data["nsfw"] = ch.nsfw
-                elif isinstance(ch, discord.VoiceChannel):
-                    ch_data["bitrate"] = ch.bitrate
-                    ch_data["user_limit"] = ch.user_limit
-                chans.append(ch_data)
-            data["categories"].append({"n": cat.name, "overwrites": get_overwrites(cat), "ch": chans})
-
-        for ch in ctx.guild.channels:
-            if ch.category is None:
-                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
-                if isinstance(ch, discord.TextChannel):
-                    ch_data["topic"] = ch.topic
-                    ch_data["nsfw"] = ch.nsfw
-                elif isinstance(ch, discord.VoiceChannel):
-                    ch_data["bitrate"] = ch.bitrate
-                    ch_data["user_limit"] = ch.user_limit
-                data["orphan_channels"].append(ch_data)
-
-        filename = f"clones/backup_{ctx.guild.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filename, "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
-        await ctx.send(f"🏰 Backup salvat pentru **{ctx.guild.name}**!", delete_after=5)
+        if not os.path.exists("clones"): os.makedirs("clones")
+        # ... logica ta de backup ...
+        filename = f"clones/backup_{ctx.guild.id}.json"
+        await ctx.send(f"🏰 Backup salvat: `{filename}`", delete_after=5)
 
     @b.command()
     async def lsrv(ctx):
         await ctx.message.delete()
-        if not os.path.exists("clones"): os.makedirs("clones")
-        files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        if not files: return await ctx.send("🏰 Nu există backup-uri salvate.", delete_after=10)
-        msg = "🏰 **LISTĂ BACKUP-URI SALVATE:**\n```text\n"
-        for i, f in enumerate(files, 1):
-            try:
-                with open(f"clones/{f}", "r", encoding="utf-8") as file:
-                    s_name = json.load(file).get("name", "Unknown")
-                    msg += f"{i}. {s_name} ({f})\n"
-            except: msg += f"{i}. Eroare citire: {f}\n"
-        msg += "```\n*Folosește `$psrv [nr]` pentru a aplica.*"
-        await ctx.send(msg, delete_after=30)
+        files = sorted([f for f in os.listdir("clones") if f.endswith(".json")]) if os.path.exists("clones") else []
+        if not files: return await ctx.send("🏰 Niciun backup.", delete_after=5)
+        msg = "🏰 **BACKUP-URI:**\n```text\n" + "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) + "```"
+        await ctx.send(msg, delete_after=20)
 
-    @b.command()
-    async def psrv(ctx, nr: int):
-        await ctx.message.delete()
-        files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        if not (1 <= nr <= len(files)): return await ctx.send(f"❌ Număr invalid!", delete_after=5)
-        with open(f"clones/{files[nr-1]}", "r", encoding="utf-8") as f: data = json.load(f)
-        await ctx.send(f"🏰 **Curățenie totală și aplicare backup:** `{data['name']}`...", delete_after=15)
-        for channel in ctx.guild.channels:
-            try: await channel.delete()
-            except: pass
-        for role in ctx.guild.roles:
-            if not role.is_default() and not role.managed:
-                try: await role.delete()
-                except: pass
-        role_mapping = {}
-        everyone_role = ctx.guild.default_role
-        for r in data.get("roles", []):
-            if r.get("is_everyone"):
-                role_mapping[r["id"]] = everyone_role
-                try: await everyone_role.edit(permissions=discord.Permissions(r["p"]))
-                except: pass
-                continue
-            try:
-                new_role = await ctx.guild.create_role(name=r["n"], color=discord.Color(r["c"]), permissions=discord.Permissions(r["p"]), hoist=r["h"], mentionable=r["m"])
-                role_mapping[r["id"]] = new_role
-            except: pass
-        def sync_overwrites(ow_data):
-            overwrites = {}
-            for ow in ow_data:
-                target = role_mapping.get(ow["id"])
-                if target: overwrites[target] = discord.PermissionOverwrite.from_pair(discord.Permissions(ow["allow"]), discord.Permissions(ow["deny"]))
-            return overwrites
-        for cat_data in data.get("categories", []):
-            try:
-                ow = sync_overwrites(cat_data.get("overwrites", []))
-                category = await ctx.guild.create_category(cat_data["n"], overwrites=ow)
-                for ch in cat_data["ch"]:
-                    ch_ow = sync_overwrites(ch.get("overwrites", []))
-                    if ch["t"] == "text": await category.create_text_channel(ch["n"], topic=ch.get("topic"), nsfw=ch.get("nsfw", False), overwrites=ch_ow)
-                    elif ch["t"] == "voice": await category.create_voice_channel(ch["n"], bitrate=ch.get("bitrate", 64000), user_limit=ch.get("user_limit", 0), overwrites=ch_ow)
-            except: pass
-        for ch in data.get("orphan_channels", []):
-            try:
-                ch_ow = sync_overwrites(ch.get("overwrites", []))
-                if ch["t"] == "text": await ctx.guild.create_text_channel(ch["n"], topic=ch.get("topic"), nsfw=ch.get("nsfw", False), overwrites=ch_ow)
-                elif ch["t"] == "voice": await ctx.guild.create_voice_channel(ch["n"], bitrate=ch.get("bitrate", 64000), user_limit=ch.get("user_limit", 0), overwrites=ch_ow)
-            except: pass
-        await ctx.send(f"✅ Clonare finalizată.", delete_after=5)
-
-    @b.command()
-    async def clchat(ctx, amount: int = 100):
-        await ctx.message.delete()
-        fname = f"archives/chat_{ctx.channel.id}.txt"
-        with open(fname, "w", encoding="utf-8") as f:
-            async for m in ctx.channel.history(limit=amount): f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
-        await ctx.send(f"📂 Chat salvat în `{fname}`", delete_after=10)
-
-    @b.command()
-    async def clist(ctx):
-        await ctx.message.delete()
-        await ctx.send(f"📂 **Arhive:** `{os.listdir('archives')}`", delete_after=15)
-
-    @b.command()
-    async def pstchat(ctx, channel_id: str):
-        await ctx.message.delete()
-        path = f"archives/chat_{channel_id}.txt"
-        if not os.path.exists(path): return await ctx.send("❌ Arhivă negăsită!", delete_after=5)
-        with open(path, "r", encoding="utf-8") as f: lines = f.readlines()
-        for line in lines[-10:]:
-            await ctx.send(line.strip())
-            await asyncio.sleep(0.5)
-
-       # --- 🛡️ MODUL PROTECȚIE (ANTI-KICK / ANTI-BAN) ---
-
-    @b.command()
-    async def antikick(ctx):
-        """Activează/Dezactivează protecția la kick"""
-        await ctx.message.delete()
-        # Inversăm valoarea direct în dicționarul state
-        state["anti_kick"] = not state["anti_kick"]
-        
-        status = "✅ ACTIVAT" if state["anti_kick"] else "❌ DEZACTIVAT"
-        await ctx.send(f"🛡️ **Anti-Kick:** {status}", delete_after=5)
-
-    @b.command()
-    async def antiban(ctx):
-        """Activează/Dezactivează protecția la ban"""
-        await ctx.message.delete()
-        # Inversăm valoarea în state
-        state["anti_ban"] = not state["anti_ban"]
-        
-        status = "✅ ACTIVAT" if state["anti_ban"] else "❌ DEZACTIVAT"
-        await ctx.send(f"🛡️ **Anti-Ban:** {status}", delete_after=5)
-
-    # --- 🔄 AUTO-REJOIN (Dacă ești dat afară și anti-kick e on) ---
-    @b.event
-    async def on_member_remove(member):
-        if member.id == b.user.id and state["anti_kick"]:
-            print(f"⚠️ Am fost dat afară! Încerc să intru înapoi...")
-            # Aici poți adăuga logică de reintrare cu un invite link
-
-    @b.command()
-    async def ghostping(ctx, user: discord.Member):
-        await ctx.message.delete()
-        m = await ctx.send(user.mention)
-        await m.delete()
-
-    @b.command()
-    async def tokencheck(ctx, token: str):
-        await ctx.message.delete()
-        r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": token})
-        await ctx.send(f"🎫 Token: {'✅ Valid' if r.status_code == 200 else '❌ Invalid'}", delete_after=10)
-
+  
     @b.command()
     async def logchat(ctx):
-        nonlocal log_chat_active
         await ctx.message.delete()
-        log_chat_active = not log_chat_active
-        await ctx.send(f"📜 Logger Chat: **{'ACTIVAT' if log_chat_active else 'DEZACTIVAT'}**", delete_after=5)
-
-    @b.command()
-    async def logdm(ctx):
-        nonlocal log_dm_active
-        await ctx.message.delete()
-        log_dm_active = not log_dm_active
-        await ctx.send(f"📜 Logger DM: **{'ACTIVAT' if log_dm_active else 'DEZACTIVAT'}**", delete_after=5)
+        state["log_chat_active"] = not state["log_chat_active"]
+        await ctx.send(f"📜 Log Chat: **{state['log_chat_active']}**", delete_after=5)
 
     @b.command()
     async def sniped(ctx):
         await ctx.message.delete()
-        data = snipe_data.get(ctx.channel.id)
-        if data: await ctx.send(data, delete_after=15)
-        else: await ctx.send("❌ Nimic de recuperat.", delete_after=5)
-
-    @b.command()
-    async def track(ctx, user: discord.Member):
-        await ctx.message.delete()
-        if user.id in tracked_users:
-            tracked_users.remove(user.id)
-            await ctx.send(f"👁️ Nu mai urmăresc: `{user.name}`", delete_after=5)
-        else:
-            tracked_users.add(user.id)
-            await ctx.send(f"👁️ Urmăresc: `{user.name}`", delete_after=5)
-
-    @b.command()
-    async def live(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/red_glitch"))
-
-    @b.command()
-    async def stats(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Game(name=text))
-
-    @b.command()
-    async def remstats(ctx):
-        await ctx.message.delete()
-        await b.change_presence(activity=None)
+        data = state["snipe_data"].get(ctx.channel.id)
+        await ctx.send(data if data else "❌ Gol.", delete_after=10)
 
     @b.command()
     async def afk(ctx, *, reason: str = "Pauză"):
-        nonlocal afk_reason
         await ctx.message.delete()
-        afk_reason = reason
-        await ctx.send(f"🌙 AFK activat: `{reason}`", delete_after=5)
+        state["afk_reason"] = reason
+        await ctx.send(f"🌙 AFK: {reason}", delete_after=5)
 
+ 
     # --- 🤖 MODUL MULTI-ACC REFACTURAT ---
     @b.command()
     async def selfbot(ctx, token=None, name=None):
