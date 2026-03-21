@@ -1,12 +1,5 @@
 # -*- coding: utf-8 -*-
-import sys
-import types
-import os
-import asyncio
-import json
-import threading
-import requests
-import time
+import sys, types, os, asyncio, json, threading, requests, time, random
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # === [ PATCH-URI PENTRU RENDER ] ===
@@ -30,19 +23,17 @@ import discord
 from discord.ext import commands
 
 # --- CONFIGURARE ---
-# ATENȚIE: Nu partaja token-urile public!
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
 START_TIME = time.time()
 active_selfbots = {}
 
-
 def setup_bot(bot):
     # State-ul intern al botului
     bot_state = {"afk": None, "snipe": {}, "last_msg": None}
 
-    # [AICI ÎNCEP COMENZILE TALE: @bot.command()...]
+    # --- COMENZILE TALE ÎNCEP MAI JOS ---
 
     # ==========================================
     # --- 📋 TOATE CELE 11 MENIURI HELP ---
@@ -545,32 +536,32 @@ $adfiles        - Salvează MP3 din atașament
                 count += 1
             if count >= amount: break
 
-@bot.event
-    async def on_message(m):
-        # IMPORTANT: Self-botul răspunde doar la mesajele TALE
+# ==========================================
+    # --- EVENT-URI (LOGICĂ INTERNĂ) ---
+    # ==========================================
+
+    @bot.event
+    async def on_message_delete(m):
         if m.author != bot.user:
-            # Verificăm totuși AFK dacă te menționează cineva
-            if bot_state["afk"] and bot.user.mentioned_in(m):
-                await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
-            return
+            bot_state["snipe"][m.channel.id] = f"🎯 **{m.author}**: {m.content}"
 
-        # DEZACTIVARE AFK dacă scrii tu un mesaj care NU e comanda de afk
-        if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
-            bot_state["afk"] = None
-            await m.channel.send("👋 AFK dezactivat.", delete_after=3)
-
-        # ACEASTĂ LINIE FACE COMENZILE SĂ MEARGĂ ($ai, $purge, etc.)
-        await bot.process_commands(m)
-
-@bot.event
+    @bot.event
     async def on_message(m):
+        # Dacă nu e mesajul tău, verificăm doar AFK
         if m.author != bot.user:
             if bot_state["afk"] and bot.user.mentioned_in(m):
                 await m.channel.send(f"🌙 [AFK] {bot_state['afk']}", delete_after=5)
             return
+
+        # Salvăm ultimul mesaj pentru comanda $copy
+        bot_state["last_msg"] = m.content
+
+        # Dezactivare AFK la primul mesaj trimis de tine
         if bot_state["afk"] and not m.content.startswith(PREFIX + "afk"):
             bot_state["afk"] = None
             await m.channel.send("👋 AFK dezactivat.", delete_after=3)
+        
+        # Procesare comenzi
         await bot.process_commands(m)
 
     @bot.event
@@ -578,7 +569,8 @@ $adfiles        - Salvează MP3 din atașament
         active_selfbots[str(bot.user.id)] = bot
         print(f"✅ BOT ACTIV: {bot.user}")
 
-# --- LOGICA DE PORNIRE (EXACT SUB setup_bot) ---
+# === [ LOGICA DE LANSARE ] ===
+
 async def main_run():
     tokens = [TOKEN_PRINCIPAL]
     if os.path.exists("tokens.txt"):
@@ -600,7 +592,6 @@ async def main_run():
     while True:
         await asyncio.sleep(3600)
 
-# === [ SERVERUL DE PORT PENTRU RENDER (KEEP-ALIVE) ] ===
 def run_health_server():
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
@@ -613,16 +604,15 @@ def run_health_server():
     port = int(os.environ.get("PORT", 10000))
     try:
         server = HTTPServer(('0.0.0.0', port), HealthHandler)
-        print(f"📡 Render Port activ pe {port}")
         threading.Thread(target=server.serve_forever, daemon=True).start()
-    except Exception as e:
-        print(f"❌ Serverul de port nu a putut porni: {e}")
+    except:
+        pass
 
 if __name__ == "__main__":
     run_health_server()
     try:
         asyncio.run(main_run())
     except KeyboardInterrupt:
-        print("🛑 Oprire manuală.")
+        pass
     except Exception as e:
         print(f"❌ Eroare fatală: {e}")
