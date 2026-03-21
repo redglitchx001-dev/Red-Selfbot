@@ -11,6 +11,7 @@ import random
 import time
 import platform
 import re
+import legacy_cgi
 # ... importurile tale ...
 import asyncio
 
