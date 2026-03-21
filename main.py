@@ -2,6 +2,7 @@
 import sys
 import types
 import os
+import asyncio
 import json
 import threading
 import shutil
@@ -11,38 +12,37 @@ import random
 import time
 import platform
 import re
-import legacy_cgi
-# ... importurile tale ...
-import asyncio
 
-print("🚀 SCRIPTUL A PORNIT! Se inițiază patch-urile...") # ADAUGĂ ASTA AICI
+print("🚀 SCRIPTUL A PORNIT! Se aplică patch-urile interne...")
 
-# === [ PATCH-URI PENTRU COMPATIBILITATE PYTHON 3.13 / 3.14 ] ===
-# Acestea repară ModuleNotFoundError: No module named 'cgi' / 'audioop'
-if 'cgi' not in sys.modules:
-    import legacy_cgi
-    sys.modules['cgi'] = legacy_cgi
+# === [ PATCH INTERN - REPARĂ EROAREA CGI ȘI AUDIOOP ] ===
+def patch_modules():
+    # Cream un modul CGI fals
+    if 'cgi' not in sys.modules:
+        cgi_mock = types.ModuleType('cgi')
+        cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;") if quote else s
+        cgi_mock.parse_header = lambda x: (x, {})
+        sys.modules['cgi'] = cgi_mock
+        print("✅ Patch CGI aplicat.")
 
-if 'audioop' not in sys.modules:
-    try:
-        import audioop_lts as audioop
-        sys.modules['audioop'] = audioop
-    except ImportError:
-        # Mock de rezervă dacă audioop_lts eșuează
+    # Cream un modul AUDIOOP fals
+    if 'audioop' not in sys.modules:
         audioop_mock = types.ModuleType('audioop')
         audioop_mock.error = Exception
-        def dummy(*args, **kwargs): return b''
+        dummy = lambda *args, **kwargs: b''
         audioop_mock.mul = audioop_mock.add = audioop_mock.bias = dummy
         audioop_mock.reverse = audioop_mock.lin2lin = dummy
         audioop_mock.ratecv = lambda *args, **kwargs: (b'', None)
         sys.modules['audioop'] = audioop_mock
+        print("✅ Patch AUDIOOP aplicat.")
 
-# ACUM IMPORȚI DISCORD (după patch-uri)
+patch_modules()
+
+# ABIA ACUM IMPORȚI DISCORD
 import discord
 from discord.ext import commands
 
-# ... restul codului tău (TOKEN_PRINCIPAL, setup_bot, etc.)
-# --- ⚙️ CONFIGURARE ---
+# --- CONFIGURARE ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ2OTc1MDA2NTg2MTEwMzgxMw.GiM93S.5no1D2KpEamJKj5UXNWmxJlMrl6WrWLmJsZaSE")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
 PREFIX = "$"
