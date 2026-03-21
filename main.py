@@ -38,7 +38,6 @@ import discord
 from discord.ext import commands
 
 # ... restul codului tău (TOKEN_PRINCIPAL, setup_bot, etc.)
-
 # --- ⚙️ CONFIGURARE ---
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G4Aq81.g1mMCVdL2bCL3DQa9m5eq0f0OH6TeocoB5pxgg,MTQ2OTc1MDA2NTg2MTEwMzgxMw.GdBEri.cU88G42uR3DzNJoy3Jlw3o5uBdH1MBgCEhnCTk,MTM4NDE5NTU1OTMwMDI3MjI3Mw.GYIecq.qTFTWzh-GmBkVWynAfsBeR0R0_fUBBVEDR88Ow")
 GEMINI_API_KEY = os.getenv("GEMINI", "AIzaSyAHji_fQ3P9mOoFPLW82PrA_AAchxpAves")
