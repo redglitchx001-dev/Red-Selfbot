@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 import sys
 import types
+import os
 import asyncio
 import json
-import shutil
-import requests
-import datetime
-import random
-import time
-import platform
-import re
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
-import os
+import requests
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# === [ PATCH-URI INTERNE PENTRU COMPATIBILITATE ] ===
+# === [ PATCH-URI PENTRU RENDER ] ===
 def apply_patches():
     if 'cgi' not in sys.modules:
         cgi_mock = types.ModuleType('cgi')
@@ -42,20 +37,12 @@ PREFIX = "$"
 START_TIME = time.time()
 active_selfbots = {}
 
-# Foldere necesare
-for f in ["music", "profiles", "clones", "archives", "logs"]:
-    if not os.path.exists(f): os.makedirs(f)
 
 def setup_bot(bot):
-    # State per instanță
-    bot_state = {
-        "afk": None,
-        "snipe": {},
-        "spamming": False,
-        "logs_chat": False,
-        "logs_dm": False,
-        "last_msg": None
-    }
+    # State-ul intern al botului
+    bot_state = {"afk": None, "snipe": {}, "last_msg": None}
+
+    # [AICI ÎNCEP COMENZILE TALE: @bot.command()...]
 
     # ==========================================
     # --- 📋 TOATE CELE 11 MENIURI HELP ---
@@ -558,52 +545,54 @@ $adfiles        - Salvează MP3 din atașament
                 count += 1
             if count >= amount: break
 
-
-# === [ LOGICA DE READY ] ===
+# Finalul funcției setup_bot
     @bot.event
     async def on_ready():
         active_selfbots[str(bot.user.id)] = bot
         print(f"✅ BOT ACTIV: {bot.user}")
 
-# === [ SERVER HTTP PENTRU RENDER (KEEP-ALIVE) ] ===
+# === [ LOGICA DE PORNIRE (NECESARĂ PE RENDER) ] ===
+async def main_run():
+    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
+    if os.path.exists("tokens.txt"):
+        with open("tokens.txt", "r") as f:
+            tokens += [line.strip() for line in f.readlines() if line.strip()]
+    
+    tokens = list(set(tokens))
+    print(f"🎬 Pornesc {len(tokens)} conturi...")
+
+    for token in tokens:
+        try:
+            nb = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+            setup_bot(nb)
+            asyncio.create_task(nb.start(token))
+            await asyncio.sleep(2)
+        except Exception as e:
+            print(f"❌ Eroare la pornire token: {e}")
+    
+    while True:
+        await asyncio.sleep(3600)
+
+# === [ SERVERUL DE PORT PENTRU RENDER ] ===
 def run_health_server():
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write(b"OK")
+            self.wfile.write(b"ONLINE")
         def log_message(self, format, *args): return
 
     port = int(os.environ.get("PORT", 10000))
-    try:
-        server = HTTPServer(('0.0.0.0', port), HealthHandler)
-        print(f"📡 Render Health Server pornit pe portul {port}")
-        server.serve_forever()
-    except Exception as e:
-        print(f"❌ Eroare Server HTTP: {e}")
-
-# === [ SERVER PENTRU RENDER ] ===
-def run_health_server():
-    class HealthHandler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            self.wfile.write(b"BOT IS ONLINE")
-        def log_message(self, format, *args): return # Nu umple consola cu log-uri de port
-
-    port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(('0.0.0.0', port), HealthHandler)
-    print(f"📡 Render Port Server pornit pe portul {port}")
-    # Pornim serverul într-un thread separat ca să nu blocheze botul
+    print(f"📡 Render Port activ pe {port}")
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
-# === [ PORNIRE FINALA ] ===
+# === [ EXECUȚIA ] ===
 if __name__ == "__main__":
-    run_health_server() # Aici activăm portul pentru Render
+    run_health_server() # Rezolvă eroarea de Port pe Render
     try:
-        asyncio.run(main_run())
+        asyncio.run(main_run()) # Rezolvă eroarea 'main_run' is not defined
     except KeyboardInterrupt:
         print("🛑 Oprit.")
     except Exception as e:
