@@ -47,15 +47,23 @@ for f in ["music", "profiles", "clones", "archives", "logs"]:
 selfbots = {} 
 
 def setup_bot(b):
-    # State variables per bot instance
-    log_chat_active = False
-    log_dm_active = False
-    anti_kick = False
-    anti_ban = False
-    tracked_users = set()
-    snipe_data = {}
-    spamming = False
-    afk_reason = None
+    # Folosim un dicționar 'state' - ASTA REZOLVĂ EROAREA PE RENDER
+    state = {
+        "log_chat_active": False,
+        "log_dm_active": False,
+        "anti_kick": False,
+        "anti_ban": False,
+        "tracked_users": set(),
+        "snipe_data": {},
+        "spamming": False,
+        "afk_reason": None
+    }
+
+    # 🔒 PROTECȚIA PE ID-UL TĂU (Adaugă asta imediat sub state)
+    @b.check
+    async def only_owner(ctx):
+        return ctx.author.id == 1472112300344479765
+
 
     @b.command()
     async def REDHELP(ctx):
@@ -109,8 +117,8 @@ $afk [reason]  - Setează motiv AFK
 $remstats      - Șterge statusul actual
 
 🤖 ・ MULTI-ACC:
-$selfbot [t][n]- Adaugă token nou
-$selfbot       - Listă conturi active
+$selfbot [t][n] - Adaugă token nou
+$selfbots       - Listă conturi active
 $selfbotr [nume]- Șterge cont din listă
 
 ⚙️ ・ ADMIN:
@@ -471,45 +479,36 @@ $adfiles         - Upload MP3 (atașament)
         afk_reason = reason
         await ctx.send(f"🌙 AFK activat: `{reason}`", delete_after=5)
 
-    # --- 🔒 SECURITATE EXCLUSIVĂ ---
-OWNER_ID = 1472112300344479765
-
-def setup_bot(b):
-    # Această verificare blochează orice comandă de la alți utilizatori
-    @b.check
-    async def only_owner(ctx):
-        return ctx.author.id == OWNER_ID
-
-    # --- 🤖 MODUL MULTI-ACC ---
+    # --- 🤖 MODUL MULTI-ACC REFACTURAT ---
     @b.command()
     async def selfbot(ctx, token=None, name=None):
         await ctx.message.delete()
-        
         if token and name:
             if name in selfbots:
                 return await ctx.send(f"❌ Numele `{name}` este deja ocupat!", delete_after=5)
             
-            # Salvăm structura
             selfbots[name] = {"token": token}
             
             async def start_new_bot(t, n):
-                # Fiecare bot nou va avea același prefix și setări
+                # Creăm instanța pentru noul cont
                 new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-                setup_bot(new_bot) # Îi dăm acces doar lui OWNER_ID
+                # RECURSIVITATE: Noul bot primește aceleași comenzi și același OWNER_ID check
+                setup_bot(new_bot) 
                 selfbots[n]["bot"] = new_bot
                 try: 
                     await new_bot.start(t)
                 except Exception: 
                     if n in selfbots: del selfbots[n]
 
-            # Lansăm botul în fundal
+            # Pornim botul în fundal ca să nu blocheze execuția
             asyncio.create_task(start_new_bot(token, name))
-            await ctx.send(f"✅ **{name}** a fost pornit. Doar tu (ID: {OWNER_ID}) îl poți controla.", delete_after=7)
-        
+            await ctx.send(f"🚀 Contul `{name}` a fost activat sub controlul tău.", delete_after=7)
         else:
-            # Lista de conturi - accesibilă doar ție
-            lista = "\n".join([f"🔹 {n}" for n in selfbots.keys()]) if selfbots else "Niciun cont activ."
-            await ctx.send(f"🤖 **REȚEAUA TA SELFBOT:**\n{lista}", delete_after=15)
+            # Lista de conturi active (vizibilă doar ție)
+            if not selfbots:
+                return await ctx.send("🤖 **REȚEAUA TA:** Niciun cont extra pornit.", delete_after=10)
+            lista = "\n".join([f"🔹 **{n}**" for n in selfbots.keys()])
+            await ctx.send(f"🤖 **CONTURI ACTIVE:**\n{lista}", delete_after=15)
 
     @b.command()
     async def selfbotr(ctx, name: str):
@@ -519,11 +518,12 @@ def setup_bot(b):
                 if "bot" in selfbots[name]:
                     await selfbots[name]["bot"].close()
                 del selfbots[name]
-                await ctx.send(f"🗑️ Contul `{name}` a fost eliminat.", delete_after=5)
+                await ctx.send(f"🗑️ `{name}` a fost eliminat.", delete_after=5)
             except Exception as e:
-                await ctx.send(f"❌ Eroare la închidere: {e}", delete_after=5)
+                await ctx.send(f"❌ Eroare la oprire: {e}", delete_after=5)
         else:
             await ctx.send(f"❌ Contul `{name}` nu a fost găsit.", delete_after=5)
+
 
     # Aici poți adăuga restul comenzilor tale ($spam, $REDHELP, etc.)
     
@@ -548,9 +548,11 @@ def setup_bot(b):
     @b.event
     async def on_ready(): print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
 
-# --- RUN ---
+# --- 🌐 SERVER PENTRU RENDER (KEEP ALIVE) ---
 def run_health_server():
     from http.server import BaseHTTPRequestHandler, HTTPServer
+    import threading
+
     class HealthHandler(BaseHTTPRequestHandler):
         def do_GET(self):
             self.send_response(200)
@@ -558,33 +560,28 @@ def run_health_server():
             self.end_headers()
             self.wfile.write(b"OK")
         def log_message(self, format, *args): return
+
     port = int(os.environ.get("PORT", 10000))
-    try:
-        server = HTTPServer(('0.0.0.0', port), HealthHandler)
-        server.serve_forever()
-    except: pass
+    server = HTTPServer(('0.0.0.0', port), HealthHandler)
+    # Pornim serverul într-un thread separat ca să nu blocheze botul
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    print(f"✅ Health Server pornit pe portul {port}")
 
-async def main_run():
-    tokens = []
-    if os.path.exists("tokens.txt"):
-        with open("tokens.txt", "r", encoding="utf-8") as f: tokens = [l.strip() for l in f.readlines() if l.strip()]
-    if not tokens: tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
-    if not tokens: return print("❌ CRITIC: Nu am găsit niciun token!")
-    for i, token in enumerate(tokens):
-        name = f"MainBot_{i}"
-        try:
-            new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-            setup_bot(new_bot)
-            selfbots[name] = {"token": token, "bot": new_bot}
-            async def safe_start(bot, t):
-                try: await bot.start(t)
-                except: pass
-            asyncio.create_task(safe_start(new_bot, token))
-            await asyncio.sleep(2.0)
-        except: pass
-    while True: await asyncio.sleep(3600)
-
+# --- 🚀 PORNIRE BOT PRINCIPAL ---
 if __name__ == "__main__":
-    threading.Thread(target=run_health_server, daemon=True).start()
-    try: asyncio.run(main_run())
-    except KeyboardInterrupt: print("🛑 Oprire.")
+    # 1. Pornim serverul de health pentru Render
+    run_health_server()
+
+    # 2. Creăm instanța botului
+    main_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+
+    # 3. Aplicăm comenzile (inclusiv OWNER_ID check)
+    setup_bot(main_bot)
+
+    # 4. RUN
+    try:
+        print("✨ Red-Selfbot se conectează...")
+        main_bot.run(TOKEN_PRINCIPAL)
+    except Exception as e:
+        print(f"❌ Eroare fatală la logare: {e}")
+
