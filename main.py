@@ -471,33 +471,62 @@ $adfiles         - Upload MP3 (atașament)
         afk_reason = reason
         await ctx.send(f"🌙 AFK activat: `{reason}`", delete_after=5)
 
+    # --- 🔒 SECURITATE EXCLUSIVĂ ---
+OWNER_ID = 1472112300344479765
+
+def setup_bot(b):
+    # Această verificare blochează orice comandă de la alți utilizatori
+    @b.check
+    async def only_owner(ctx):
+        return ctx.author.id == OWNER_ID
+
+    # --- 🤖 MODUL MULTI-ACC ---
     @b.command()
     async def selfbot(ctx, token=None, name=None):
         await ctx.message.delete()
+        
         if token and name:
+            if name in selfbots:
+                return await ctx.send(f"❌ Numele `{name}` este deja ocupat!", delete_after=5)
+            
+            # Salvăm structura
             selfbots[name] = {"token": token}
+            
             async def start_new_bot(t, n):
+                # Fiecare bot nou va avea același prefix și setări
                 new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-                setup_bot(new_bot)
+                setup_bot(new_bot) # Îi dăm acces doar lui OWNER_ID
                 selfbots[n]["bot"] = new_bot
-                try: await new_bot.start(t)
-                except: 
+                try: 
+                    await new_bot.start(t)
+                except Exception: 
                     if n in selfbots: del selfbots[n]
+
+            # Lansăm botul în fundal
             asyncio.create_task(start_new_bot(token, name))
-            await ctx.send(f"🤖 Adăugat: `{name}`", delete_after=5)
+            await ctx.send(f"✅ **{name}** a fost pornit. Doar tu (ID: {OWNER_ID}) îl poți controla.", delete_after=7)
+        
         else:
-            lista = "\n".join([f"- {n}" for n in selfbots.keys()]) if selfbots else "Niciun cont salvat."
-            await ctx.send(f"🤖 **Conturi active:**\n{lista}", delete_after=10)
+            # Lista de conturi - accesibilă doar ție
+            lista = "\n".join([f"🔹 {n}" for n in selfbots.keys()]) if selfbots else "Niciun cont activ."
+            await ctx.send(f"🤖 **REȚEAUA TA SELFBOT:**\n{lista}", delete_after=15)
 
     @b.command()
     async def selfbotr(ctx, name: str):
         await ctx.message.delete()
         if name in selfbots:
-            if "bot" in selfbots[name]: await selfbots[name]["bot"].close()
-            del selfbots[name]
-            await ctx.send(f"🤖 Șters: `{name}`", delete_after=5)
-        else: await ctx.send(f"❌ Contul `{name}` nu există.", delete_after=5)
+            try:
+                if "bot" in selfbots[name]:
+                    await selfbots[name]["bot"].close()
+                del selfbots[name]
+                await ctx.send(f"🗑️ Contul `{name}` a fost eliminat.", delete_after=5)
+            except Exception as e:
+                await ctx.send(f"❌ Eroare la închidere: {e}", delete_after=5)
+        else:
+            await ctx.send(f"❌ Contul `{name}` nu a fost găsit.", delete_after=5)
 
+    # Aici poți adăuga restul comenzilor tale ($spam, $REDHELP, etc.)
+    
     @b.event
     async def on_message_delete(m):
         if m.author != b.user: snipe_data[m.channel.id] = f"🎯 **{m.author}**: {m.content}"
