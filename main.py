@@ -438,19 +438,34 @@ $adfiles         - Upload MP3 (atașament)
             await ctx.send(line.strip())
             await asyncio.sleep(0.5)
 
-    @b.command(name="anti-kick")
-    async def anti_kick_cmd(ctx):
-        nonlocal anti_kick
-        await ctx.message.delete()
-        anti_kick = not anti_kick
-        await ctx.send(f"🛡️ Anti-Kick: **{'ACTIVAT' if anti_kick else 'DEZACTIVAT'}**", delete_after=5)
+       # --- 🛡️ MODUL PROTECȚIE (ANTI-KICK / ANTI-BAN) ---
 
-    @b.command(name="anti-ban")
-    async def anti_ban_cmd(ctx):
-        nonlocal anti_ban
+    @b.command()
+    async def antikick(ctx):
+        """Activează/Dezactivează protecția la kick"""
         await ctx.message.delete()
-        anti_ban = not anti_ban
-        await ctx.send(f"🛡️ Anti-Ban: **{'ACTIVAT' if anti_ban else 'DEZACTIVAT'}**", delete_after=5)
+        # Inversăm valoarea direct în dicționarul state
+        state["anti_kick"] = not state["anti_kick"]
+        
+        status = "✅ ACTIVAT" if state["anti_kick"] else "❌ DEZACTIVAT"
+        await ctx.send(f"🛡️ **Anti-Kick:** {status}", delete_after=5)
+
+    @b.command()
+    async def antiban(ctx):
+        """Activează/Dezactivează protecția la ban"""
+        await ctx.message.delete()
+        # Inversăm valoarea în state
+        state["anti_ban"] = not state["anti_ban"]
+        
+        status = "✅ ACTIVAT" if state["anti_ban"] else "❌ DEZACTIVAT"
+        await ctx.send(f"🛡️ **Anti-Ban:** {status}", delete_after=5)
+
+    # --- 🔄 AUTO-REJOIN (Dacă ești dat afară și anti-kick e on) ---
+    @b.event
+    async def on_member_remove(member):
+        if member.id == b.user.id and state["anti_kick"]:
+            print(f"⚠️ Am fost dat afară! Încerc să intru înapoi...")
+            # Aici poți adăuga logică de reintrare cu un invite link
 
     @b.command()
     async def ghostping(ctx, user: discord.Member):
