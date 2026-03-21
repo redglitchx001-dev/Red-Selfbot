@@ -55,6 +55,7 @@ def setup_bot(bot):
         "logs_chat": False,
         "logs_dm": False,
         "last_msg": None
+    }
 
     # ==========================================
     # --- 📋 TOATE CELE 11 MENIURI HELP ---
