@@ -1,3 +1,5 @@
 discord.py-self==1.9.2
 requests
 PyNaCl
+legacy-cgi
+audioop-lts
