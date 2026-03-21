@@ -1,23 +1,25 @@
-# -*- coding: utf-8 -*-
 import sys
 import types
 
-# --- FIX CRITIC PENTRU PYTHON 3.13+ (ModuleNotFoundError: No module named 'cgi') ---
-# Trebuie să fie la linia 1, înainte de 'import discord'
-if 'cgi' not in sys.modules:
-    cgi_mock = types.ModuleType('cgi')
-    cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;") if quote else s
-    cgi_mock.parse_header = lambda x: (x, {})
-    sys.modules['cgi'] = cgi_mock
-    print("✅ Patch 'cgi' aplicat pentru compatibilitate Python 3.14")
+# PATCH PENTRU PYTHON 3.13 / 3.14
+for mod_name in ['cgi', 'audioop']:
+    if mod_name not in sys.modules:
+        m = types.ModuleType(mod_name)
+        if mod_name == 'cgi':
+            m.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+            m.parse_header = lambda x: (x, {})
+        elif mod_name == 'audioop':
+            m.error = Exception
+            for func in ['mul', 'add', 'bias', 'reverse', 'lin2lin']:
+                setattr(m, func, lambda *args, **kwargs: b'')
+            m.ratecv = lambda *args, **kwargs: (b'', None)
+        sys.modules[mod_name] = m
 
-# Acum poți importa restul bibliotecilor
-import os
-import asyncio
+# ABIA ACUM IMPORȚI DISCORD
 import discord
 from discord.ext import commands
-import requests
-# ... restul codului tău de mai jos
+import os
+# ... restul codului
 
 # === [ 🛠️ PATCH-URI DE COMPATIBILITATE PENTRU PYTHON 3.13+ ] ===
 def apply_patches():
