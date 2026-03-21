@@ -1,7 +1,23 @@
 # -*- coding: utf-8 -*-
-import sys, types, os, asyncio, json, threading, shutil, requests, datetime, random, time, platform, re
+import sys
+import types
+
+# --- FIX CRITIC PENTRU PYTHON 3.13+ (ModuleNotFoundError: No module named 'cgi') ---
+# Trebuie să fie la linia 1, înainte de 'import discord'
+if 'cgi' not in sys.modules:
+    cgi_mock = types.ModuleType('cgi')
+    cgi_mock.escape = lambda s, quote=True: s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;") if quote else s
+    cgi_mock.parse_header = lambda x: (x, {})
+    sys.modules['cgi'] = cgi_mock
+    print("✅ Patch 'cgi' aplicat pentru compatibilitate Python 3.14")
+
+# Acum poți importa restul bibliotecilor
+import os
+import asyncio
 import discord
 from discord.ext import commands
+import requests
+# ... restul codului tău de mai jos
 
 # === [ 🛠️ PATCH-URI DE COMPATIBILITATE PENTRU PYTHON 3.13+ ] ===
 def apply_patches():
