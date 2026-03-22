@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-import sys, types, os, asyncio, json, threading, shutil, requests, datetime, re
+import sys, types, os, asyncio, json, threading, shutil, requests, datetime
 
-# --- 🚀 FIX-URI PYTHON 3.13 (RENDER/ANDROID) ---
+# --- 🚀 FIX-URI CRITICE PENTRU PYTHON 3.13 & ANDROID ---
 def apply_patches():
     for mod_name in ["cgi", "pipes", "audioop"]:
         if mod_name not in sys.modules:
@@ -18,15 +18,16 @@ def apply_patches():
             sys.modules[mod_name] = m
     try:
         import discord.settings
-        _orig = discord.settings.Settings.init
+        _orig = discord.settings.Settings.__init__
         def _patched(self, *, data, state):
             if data and data.get('friend_source_flags') is None:
                 data['friend_source_flags'] = {}
             return _orig(self, data=data, state=state)
-        discord.settings.Settings.init = _patched
+        discord.settings.Settings.__init__ = _patched
     except: pass
 
 apply_patches()
+os.environ['no_proxy'] = '*'
 
 try:
     import discord
@@ -36,36 +37,25 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-# Token-ul principal este cel din variabila de mediu sau cel pus aici.
 TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GyG-VN.L1YCIb-y7pDldtqsWNXQIr2x2lMxIMtUO5SVyg")
 PREFIX = "$"
-OWNER_ID = 1472112300344479765 
 
 # Creare structură foldere
-FOLDERS = ["music", "profiles", "clones", "archives", "logs"]
-for f in FOLDERS:
+for f in ["music", "profiles", "clones", "archives", "logs"]:
     if not os.path.exists(f): os.makedirs(f)
 
-selfbots = {}
+selfbots = {} 
 
 def setup_bot(b):
-    # Starea internă a fiecărui cont
-    state = {
-        "spamming": False,
-        "afk_reason": None,
-        "snipe_data": {},
-        "anti_kick": False,
-        "anti_ban": False,
-        "log_chat": False,
-        "log_dm": False
-    }
+    log_chat_active = False
+    log_dm_active = False
+    anti_kick = False
+    anti_ban = False
+    tracked_users = set()
+    snipe_data = {}
+    spamming = False
+    afk_reason = None
 
-    # --- 🛡️ SECURITATE: DOAR TU ---
-    @b.check
-    async def owner_only(ctx):
-        return ctx.author.id == OWNER_ID
-
-    # --- 📜 MENIUL COMPLET ---
     @b.command()
     async def REDHELP(ctx):
         await ctx.message.delete()
@@ -81,9 +71,9 @@ $plays [nr]    - Pornește piesa cu numărul X
 $stops         - Oprește muzica și ieși din canal
 
 ✉️ ・ SPAM BOT:
-$spam @user    - Începe spam-ul din botjura.txt
+$start @user   - Începe spam-ul din botjura.txt
 $stop          - Oprește procesul de spam
-$repeat [m][n][d] - Repetă text de X ori cu delay
+$span [m][n][d] - Repetă text de X ori cu delay
 
 👤 ・ PROFILE ARCHIVER:
 $prfdwn @user  - Descarcă profilul în /profiles
@@ -114,7 +104,6 @@ $track @user   - Notificări status utilizator
 ✨ ・ STATUS & UTIL:
 $stats [text]  - Setează status personalizat
 $live [text]   - Setează status streaming mov
-$afk [reason]  - Setează motiv AFK
 $remstats      - Șterge statusul actual
 
 🤖 ・ MULTI-ACC:
@@ -133,242 +122,460 @@ Credits: RedGlitchX / redglitchx. / XTASK
 ```"""
         await ctx.send(menu, delete_after=30)
 
-    # --- 🎵 MUZICĂ & VOICE ---
     @b.command()
     async def helpvc(ctx):
         await ctx.message.delete()
-        await ctx.send("```🎵 $plays [nr], $stops, $downloadm, $adfiles, $dwnlibs```", delete_after=15)
-
-    @b.command()
-    async def dwnlibs(ctx):
-        await ctx.message.delete()
-        files = sorted(os.listdir("music"))
-        if not files: return await ctx.send("❌ Biblioteca e goală.", delete_after=5)
-        text = "--- 🎵 BIBLIOTECĂ ---\n" + "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)])
-        await ctx.send(f"```text\n{text}```", delete_after=20)
+        help_text = """```text
+--- 🎵 VOICE HELP ---
+$plays [nr/nume] - Redă piesa
+$stops           - Oprește muzica
+$downloadm [url] - Descarcă MP3
+$dwnlibs         - Listă piese
+$adfiles         - Upload MP3 (atașament)
+```"""
+        await ctx.send(help_text, delete_after=15)
 
     @b.command()
     async def plays(ctx, *, name: str):
         await ctx.message.delete()
-        if not ctx.author.voice: return await ctx.send("❌ Intră pe VC!", delete_after=5)
+        if not ctx.author.voice: return await ctx.send("❌ Intră pe un canal vocal!", delete_after=5)
         files = sorted(os.listdir("music"))
         path = None
-        if name.isdigit() and 1 <= int(name) <= len(files):
-            path = f"music/{files[int(name)-1]}"
+        if name.isdigit():
+            idx = int(name) - 1
+            if 0 <= idx < len(files): path = f"music/{files[idx]}"
         else:
             for f in files:
-                if name.lower() in f.lower(): path = f"music/{f}"; break
-        
-        if path:
+                if name.lower() in f.lower():
+                    path = f"music/{f}"
+                    break
+        if not path or not os.path.exists(path): return await ctx.send(f"❌ Piesa `{name}` nu a fost găsită!", delete_after=5)
+        try:
             vc = ctx.voice_client or await ctx.author.voice.channel.connect()
             if vc.is_playing(): vc.stop()
             vc.play(discord.FFmpegPCMAudio(path))
             await ctx.send(f"🎶 Redau: `{os.path.basename(path)}`", delete_after=10)
-        else: await ctx.send("❌ Piesă negăsită.", delete_after=5)
+        except Exception as e: await ctx.send(f"❌ Eroare Voice: {e}", delete_after=10)
 
     @b.command()
     async def stops(ctx):
         await ctx.message.delete()
         if ctx.voice_client: await ctx.voice_client.disconnect()
 
-    # --- ✉️ SPAM BOT ---
     @b.command()
-    async def spam(ctx, user: discord.Member = None):
+    async def downloadm(ctx, link: str):
         await ctx.message.delete()
-        state["spamming"] = True
-        lines = ["RED-SELFBOT ON TOP"]
-        if os.path.exists("botjura.txt"):
-            with open("botjura.txt", "r", encoding="utf-8") as f:
-                lines = [l.strip() for l in f.readlines() if l.strip()]
-        
-        while state["spamming"]:
-            for line in lines:
-                if not state["spamming"]: break
-                await ctx.send(f"{user.mention if user else ''} {line}")
-                await asyncio.sleep(0.7)
+        try:
+            fname = f"music/dwn_{datetime.datetime.now().strftime('%H%M%S')}.mp3"
+            r = requests.get(link, stream=True, timeout=15)
+            with open(fname, 'wb') as f:
+                for chunk in r.iter_content(1024): f.write(chunk)
+            await ctx.send(f"✅ Descărcat: `{fname}`", delete_after=10)
+        except: await ctx.send("❌ Eroare la descărcare!", delete_after=5)
+
+    @b.command()
+    async def adfiles(ctx):
+        await ctx.message.delete()
+        if not ctx.message.attachments:
+            return await ctx.send("❌ Atașează un fișier MP3!", delete_after=5)
+        for attachment in ctx.message.attachments:
+            if attachment.filename.endswith(".mp3"):
+                await attachment.save(f"music/{attachment.filename}")
+                await ctx.send(f"✅ Salvat: `{attachment.filename}`", delete_after=5)
+            else:
+                await ctx.send(f"❌ `{attachment.filename}` nu este MP3!", delete_after=5)
+
+    @b.command()
+    async def dwnlibs(ctx):
+        await ctx.message.delete()
+        files = sorted(os.listdir("music"))
+        lista = "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) if files else "Niciun fișier."
+        await ctx.send(f"🎵 **Librărie:**\n```\n{lista}\n```", delete_after=20)
+
+    @b.command()
+    async def start(ctx, user: discord.Member = None):
+        nonlocal spamming
+        await ctx.message.delete()
+        spamming = True
+        if not os.path.exists("botjura.txt"):
+            with open("botjura.txt", "w", encoding="utf-8") as f: f.write("RED-SELFBOT ON TOP\n")
+        with open("botjura.txt", "r", encoding="utf-8") as f:
+            lines = [l.strip() for l in f.readlines() if l.strip()]
+        while spamming:
+            for l in lines:
+                if not spamming: break
+                await ctx.send(f"{user.mention if user else ''} {l}")
+                await asyncio.sleep(0.8)
 
     @b.command()
     async def stop(ctx):
-        state["spamming"] = False
+        nonlocal spamming
+        spamming = False
         await ctx.message.delete()
-        await ctx.send("🛑 Proces oprit.", delete_after=3)
+        await ctx.send("🛑 Spam oprit.", delete_after=3)
 
     @b.command()
-    async def repeat(ctx, times: int, delay: float, *, text):
+    async def span(ctx, msg: str, count: int, delay: float = 0.5):
         await ctx.message.delete()
-        for _ in range(times):
-            await ctx.send(text)
+        for _ in range(count):
+            await ctx.send(msg)
             await asyncio.sleep(delay)
 
-    # --- 👤 PROFILE ARCHIVER ---
     @b.command()
-    async def prfdwn(ctx, user: discord.User):
+    async def prfdwn(ctx, user: discord.Member):
         await ctx.message.delete()
-        u_dir = f"profiles/{user.id}"
-        if not os.path.exists(u_dir): os.makedirs(u_dir)
-        
+        if not os.path.exists("profiles"): os.makedirs("profiles")
         data = {
-            "name": user.name, "id": user.id, "created": str(user.created_at),
-            "avatar": str(user.avatar_url), "banner": str(user.banner_url if hasattr(user, 'banner') else None)
+            "name": user.name,
+            "id": user.id,
+            "avatar": str(user.avatar_url),
+            "created_at": str(user.created_at),
+            "joined_at": str(user.joined_at),
+            "roles": [r.name for r in user.roles]
         }
-        with open(f"{u_dir}/info.json", "w") as f: json.dump(data, f, indent=4)
-        if user.avatar_url:
-            r = requests.get(user.avatar_url)
-            with open(f"{u_dir}/avatar.png", "wb") as f: f.write(r.content)
-        await ctx.send(f"👤 Profil salvat: `{user.name}`", delete_after=5)
+        with open(f"profiles/{user.id}.json", "w") as f: json.dump(data, f, indent=4)
+        await ctx.send(f"👤 Profil arhivat: `{user.name}`", delete_after=5)
 
-    # --- 🏰 CLONER ---
+    @b.command()
+    async def mphelp(ctx):
+        await ctx.message.delete()
+        await ctx.send("```Profil Archiver: $prfdwn @user - Salvează JSON în /profiles```", delete_after=10)
+
     @b.command()
     async def dsrv(ctx):
         await ctx.message.delete()
-        backup = {
-            "n": ctx.guild.name,
-            "cats": []
+        data = {
+            "name": ctx.guild.name,
+            "roles": [],
+            "categories": [],
+            "orphan_channels": []
         }
-        for cat in sorted(ctx.guild.categories, key=lambda x: x.position):
-            c_data = {"n": cat.name, "ch": []}
-            for ch in sorted(cat.channels, key=lambda x: x.position):
-                c_data["ch"].append({"n": ch.name, "t": str(ch.type)})
-            backup["cats"].append(c_data)
-        
-        idx = len(os.listdir("clones")) + 1
-        with open(f"clones/backup_{idx}.json", "w") as f: json.dump(backup, f)
-        await ctx.send(f"🏰 Backup salvat cu ID `{idx}`", delete_after=7)
+        for role in reversed(ctx.guild.roles):
+            if not role.managed:
+                data["roles"].append({
+                    "id": role.id,
+                    "n": role.name,
+                    "c": role.color.value,
+                    "p": role.permissions.value,
+                    "h": role.hoist,
+                    "m": role.mentionable,
+                    "is_everyone": role.is_default()
+                })
+
+        def get_overwrites(channel):
+            overwrites = []
+            for target, overwrite in channel.overwrites.items():
+                allow, deny = overwrite.pair()
+                overwrites.append({
+                    "id": target.id,
+                    "type": "role" if isinstance(target, discord.Role) else "member",
+                    "allow": allow.value,
+                    "deny": deny.value
+                })
+            return overwrites
+
+        for cat in ctx.guild.categories:
+            chans = []
+            for ch in cat.channels:
+                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
+                if isinstance(ch, discord.TextChannel):
+                    ch_data["topic"] = ch.topic
+                    ch_data["nsfw"] = ch.nsfw
+                elif isinstance(ch, discord.VoiceChannel):
+                    ch_data["bitrate"] = ch.bitrate
+                    ch_data["user_limit"] = ch.user_limit
+                chans.append(ch_data)
+            data["categories"].append({"n": cat.name, "overwrites": get_overwrites(cat), "ch": chans})
+
+        for ch in ctx.guild.channels:
+            if ch.category is None:
+                ch_data = {"n": ch.name, "t": str(ch.type), "overwrites": get_overwrites(ch)}
+                if isinstance(ch, discord.TextChannel):
+                    ch_data["topic"] = ch.topic
+                    ch_data["nsfw"] = ch.nsfw
+                elif isinstance(ch, discord.VoiceChannel):
+                    ch_data["bitrate"] = ch.bitrate
+                    ch_data["user_limit"] = ch.user_limit
+                data["orphan_channels"].append(ch_data)
+
+        filename = f"clones/backup_{ctx.guild.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        with open(filename, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
+        await ctx.send(f"🏰 Backup salvat pentru **{ctx.guild.name}**!", delete_after=5)
 
     @b.command()
     async def lsrv(ctx):
         await ctx.message.delete()
+        if not os.path.exists("clones"): os.makedirs("clones")
         files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        if not files: return await ctx.send("❌ Nicio schemă.", delete_after=5)
-        text = "--- 🏰 SCHEME ---\n" + "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)])
-        await ctx.send(f"```text\n{text}```", delete_after=20)
+        if not files: return await ctx.send("🏰 Nu există backup-uri salvate.", delete_after=10)
+        msg = "🏰 **LISTĂ BACKUP-URI SALVATE:**\n```text\n"
+        for i, f in enumerate(files, 1):
+            try:
+                with open(f"clones/{f}", "r", encoding="utf-8") as file:
+                    data = json.load(file)
+                    msg += f"{i}. {data.get('name', 'Unknown')} ({f})\n"
+            except: msg += f"{i}. Eroare citire: {f}\n"
+        msg += "```\n*Folosește `$psrv [nr]` pentru a aplica.*"
+        await ctx.send(msg, delete_after=30)
 
     @b.command()
     async def psrv(ctx, nr: int):
         await ctx.message.delete()
         files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        if nr < 1 or nr > len(files): return await ctx.send("❌ Index invalid.", delete_after=5)
-        
-        with open(f"clones/{files[nr-1]}", "r") as f: data = json.load(f)
-        await ctx.send("🏗️ Construiesc serverul...", delete_after=5)
-        for c in ctx.guild.channels: 
-            try: await c.delete()
+        if not (1 <= nr <= len(files)): return await ctx.send(f"❌ Număr invalid!", delete_after=5)
+        path = f"clones/{files[nr-1]}"
+        with open(path, "r", encoding="utf-8") as f: data = json.load(f)
+        await ctx.send(f"🏰 Aplicare backup: **{data['name']}**...", delete_after=10)
+        role_mapping = {}
+        for r in data.get("roles", []):
+            if r.get("is_everyone"):
+                role_mapping[r["id"]] = ctx.guild.default_role
+                continue
+            try:
+                new_role = await ctx.guild.create_role(name=r["n"], color=discord.Color(r["c"]), permissions=discord.Permissions(r["p"]), hoist=r["h"], mentionable=r["m"])
+                role_mapping[r["id"]] = new_role
             except: pass
-        
-        for cat_d in data["cats"]:
-            category = await ctx.guild.create_category(cat_d["n"])
-            for ch_d in cat_d["ch"]:
-                if ch_d["t"] == "text": await category.create_text_channel(ch_d["n"])
-                else: await category.create_voice_channel(ch_d["n"])
 
-    # --- 🛡️ BP2 & PROTECȚIE ---
+        def sync_overwrites(ow_data):
+            overwrites = {}
+            for ow in ow_data:
+                target = role_mapping.get(ow["id"])
+                if target: overwrites[target] = discord.PermissionOverwrite.from_pair(discord.Permissions(ow["allow"]), discord.Permissions(ow["deny"]))
+            return overwrites
+
+        for cat_data in data.get("categories", []):
+            try:
+                category = await ctx.guild.create_category(cat_data["n"], overwrites=sync_overwrites(cat_data.get("overwrites", [])))
+                for ch in cat_data["ch"]:
+                    if ch["t"] == "text": await category.create_text_channel(ch["n"], topic=ch.get("topic"), nsfw=ch.get("nsfw", False), overwrites=sync_overwrites(ch.get("overwrites", [])))
+                    elif ch["t"] == "voice": await category.create_voice_channel(ch["n"], bitrate=ch.get("bitrate", 64000), user_limit=ch.get("user_limit", 0), overwrites=sync_overwrites(ch.get("overwrites", [])))
+            except: pass
+        await ctx.send("✅ Backup aplicat!", delete_after=5)
+
+    @b.command()
+    async def clchat(ctx, amount: int = 100):
+        await ctx.message.delete()
+        fname = f"archives/chat_{ctx.channel.id}.txt"
+        with open(fname, "w", encoding="utf-8") as f:
+            async for m in ctx.channel.history(limit=amount): f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        await ctx.send(f"📂 Chat salvat în `{fname}`", delete_after=10)
+
+    @b.command()
+    async def clist(ctx):
+        await ctx.message.delete()
+        await ctx.send(f"📂 **Arhive:** `{os.listdir('archives')}`", delete_after=15)
+
+    @b.command()
+    async def pstchat(ctx, channel_id: str):
+        await ctx.message.delete()
+        path = f"archives/chat_{channel_id}.txt"
+        if not os.path.exists(path): return await ctx.send("❌ Arhivă negăsită!", delete_after=5)
+        with open(path, "r", encoding="utf-8") as f: lines = f.readlines()
+        for line in lines[-10:]:
+            await ctx.send(line.strip())
+            await asyncio.sleep(0.5)
+
     @b.command(name="anti-kick")
-    async def antikick(ctx):
-        state["anti_kick"] = not state["anti_kick"]
-        await ctx.send(f"🛡️ Anti-Kick: {'ON' if state['anti_kick'] else 'OFF'}", delete_after=5)
+    async def anti_kick_cmd(ctx):
+        nonlocal anti_kick
+        await ctx.message.delete()
+        anti_kick = not anti_kick
+        await ctx.send(f"🛡️ Anti-Kick: **{'ACTIVAT' if anti_kick else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command(name="anti-ban")
-    async def antiban(ctx):
-        state["anti_ban"] = not state["anti_ban"]
-        await ctx.send(f"🛡️ Anti-Ban: {'ON' if state['anti_ban'] else 'OFF'}", delete_after=5)
+    async def anti_ban_cmd(ctx):
+        nonlocal anti_ban
+        await ctx.message.delete()
+        anti_ban = not anti_ban
+        await ctx.send(f"🛡️ Anti-Ban: **{'ACTIVAT' if anti_ban else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command()
     async def ghostping(ctx, user: discord.Member):
         await ctx.message.delete()
-        await ctx.send(user.mention, delete_after=0.1)
+        m = await ctx.send(user.mention)
+        await m.delete()
 
-    # --- 📜 LOGGER ---
+    @b.command()
+    async def tokencheck(ctx, token: str):
+        await ctx.message.delete()
+        r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": token})
+        await ctx.send(f"🎫 Token: {'✅ Valid' if r.status_code == 200 else '❌ Invalid'}", delete_after=10)
+
     @b.command()
     async def logchat(ctx):
-        state["log_chat"] = not state["log_chat"]
-        await ctx.send(f"📜 Log Chat: {'ON' if state['log_chat'] else 'OFF'}", delete_after=5)
+        nonlocal log_chat_active
+        await ctx.message.delete()
+        log_chat_active = not log_chat_active
+        await ctx.send(f"📜 Logger Chat: **{'ACTIVAT' if log_chat_active else 'DEZACTIVAT'}**", delete_after=5)
+
+    @b.command()
+    async def logdm(ctx):
+        nonlocal log_dm_active
+        await ctx.message.delete()
+        log_dm_active = not log_dm_active
+        await ctx.send(f"📜 Logger DM: **{'ACTIVAT' if log_dm_active else 'DEZACTIVAT'}**", delete_after=5)
 
     @b.command()
     async def sniped(ctx):
         await ctx.message.delete()
-        msg = state["snipe_data"].get(ctx.channel.id, "❌ Nimic înregistrat.")
-        await ctx.send(msg, delete_after=15)
+        data = snipe_data.get(ctx.channel.id)
+        await ctx.send(data if data else "❌ Nimic de recuperat.", delete_after=15)
 
-    # --- ✨ STATUS ---
+    @b.command()
+    async def track(ctx, user: discord.Member):
+        await ctx.message.delete()
+        if user.id in tracked_users:
+            tracked_users.remove(user.id)
+            await ctx.send(f"👁️ Nu mai urmăresc: `{user.name}`", delete_after=5)
+        else:
+            tracked_users.add(user.id)
+            await ctx.send(f"👁️ Urmăresc: `{user.name}`", delete_after=5)
+
+    @b.command()
+    async def live(ctx, *, text):
+        await ctx.message.delete()
+        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/red_glitch"))
+
     @b.command()
     async def stats(ctx, *, text):
         await ctx.message.delete()
         await b.change_presence(activity=discord.Game(name=text))
 
     @b.command()
-    async def live(ctx, *, text):
-        await ctx.message.delete()
-        await b.change_presence(activity=discord.Streaming(name=text, url="https://twitch.tv/redglitchx"))
-
-    @b.command()
-    async def afk(ctx, *, reason="Pauză"):
-        await ctx.message.delete()
-        state["afk_reason"] = reason
-        await ctx.send(f"🌙 AFK: `{reason}`", delete_after=5)
-
-    @b.command()
     async def remstats(ctx):
         await ctx.message.delete()
         await b.change_presence(activity=None)
 
-    # --- 🤖 MULTI-ACC ---
     @b.command()
     async def selfbot(ctx, token=None, name=None):
         await ctx.message.delete()
         if token and name:
-            new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-            setup_bot(new_bot)
-            selfbots[name] = new_bot
-            asyncio.create_task(new_bot.start(token))
-            await ctx.send(f"✅ Cont `{name}` adăugat.", delete_after=5)
-        else:
-            accs = ", ".join(selfbots.keys()) if selfbots else "Niciunul"
-            await ctx.send(f"🤖 **Conturi active:** {accs}", delete_after=10)
+            selfbots[name] = {"token": token}
+            async def start_new_bot(t, n):
+                new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+                setup_bot(new_bot)
+                selfbots[n]["bot"] = new_bot
+                try: await new_bot.start(t)
+                except: 
+                    if n in selfbots: del selfbots[n]
+            asyncio.create_task(start_new_bot(token, name))
+            await ctx.send(f"🤖 Adăugat: `{name}`", delete_after=5)
+        else: await ctx.send(f"🤖 **Conturi active:**\n{list(selfbots.keys())}", delete_after=10)
 
-    # --- 🛰️ EVENIMENTE ---
+    @b.command()
+    async def selfbotr(ctx, name: str):
+        await ctx.message.delete()
+        if name in selfbots:
+            if "bot" in selfbots[name]: await selfbots[name]["bot"].close()
+            del selfbots[name]
+            await ctx.send(f"🤖 Șters: `{name}`", delete_after=5)
+
     @b.event
     async def on_message_delete(m):
-        if m.author != b.user:
-            state["snipe_data"][m.channel.id] = f"🎯 **{m.author}**: {m.content}"
+        if m.author != b.user: snipe_data[m.channel.id] = f"🎯 **{m.author}**: {m.content}"
+
+    @b.event
+    async def on_member_update(before, after):
+        if after.id in tracked_users and before.status != after.status:
+            print(f"👁️ **TRACK:** `{after.name}` este acum **{after.status}**")
 
     @b.event
     async def on_message(m):
-        if state["afk_reason"] and b.user.mentioned_in(m) and m.author != b.user:
-            await m.channel.send(f"🌙 [AFK] {state['afk_reason']}", delete_after=7)
-        
-        if state["log_chat"] and not m.author.bot:
-            with open(f"logs/{m.channel.id}.txt", "a", encoding="utf-8") as f:
-                f.write(f"[{datetime.datetime.now()}] {m.author}: {m.content}\n")
-        
-        if m.author.id == OWNER_ID:
-            await b.process_commands(m)
+        nonlocal log_chat_active, log_dm_active
+        if log_chat_active and m.guild and m.author != b.user:
+            with open(f"logs/chat_{m.channel.id}.txt", "a", encoding="utf-8") as f: f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        if log_dm_active and not m.guild and m.author != b.user:
+            with open(f"logs/dm_{m.author.id}.txt", "a", encoding="utf-8") as f: f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        if m.author == b.user: await b.process_commands(m)
 
     @b.event
-    async def on_ready():
-        print(f"🚀 {b.user} pornit!")
+    async def on_ready(): print(f"🚀 RED-SELFBOT ONLINE! | {b.user}")
 
-# --- 🌐 SERVER HEALTH (PENTRU RENDER) ---
-def start_health():
+# --- RUN ---
+def run_health_server():
     from http.server import BaseHTTPRequestHandler, HTTPServer
-    class H(BaseHTTPRequestHandler):
-        def do_GET(self): self.send_response(200); self.end_headers(); self.wfile.write(b"OK")
-    port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(('0.0.0.0', port), H)
-    threading.Thread(target=server.serve_forever, daemon=True).start()
+    class HealthHandler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            self.send_response(200)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(b"GOOD")
+        def log_message(self, format, *args): return
 
-async def start_all():
-    start_health()
-    # Separăm token-urile dacă sunt puse cu virgulă în variabila TOKEN
-    tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
-    for i, t in enumerate(tokens):
-        bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
-        setup_bot(bot)
-        selfbots[f"Main_{i}"] = bot
-        asyncio.create_task(bot.start(t))
-    
-    while True: await asyncio.sleep(10)
+    # Render folosește de obicei portul 10000 sau cel definit în variabila PORT
+    port = int(os.environ.get("PORT", 10000))
+    try:
+        server = HTTPServer(('0.0.0.0', port), HealthHandler)
+        print(f"📡 Health check server pornit pe portul {port}")
+        server.serve_forever()
+    except Exception as e:
+        print(f"❌ Eroare server health: {e}")
+
+# --- MAIN RUN ---
+async def main_run():
+    print("🎬 Inițiez main_run...")
+    try:
+        # Încercăm să citim din tokens.txt (un token pe linie)
+        tokens = []
+        if os.path.exists("tokens.txt"):
+            with open("tokens.txt", "r", encoding="utf-8") as f:
+                tokens = [line.strip() for line in f.readlines() if line.strip()]
+            print(f"📄 Am citit {len(tokens)} token-uri din tokens.txt")
+        
+        # Dacă nu avem nimic în tokens.txt, folosim TOKEN_PRINCIPAL ca fallback
+        if not tokens:
+            print("ℹ️ Nu am găsit tokens.txt sau e gol, folosesc TOKEN_PRINCIPAL...")
+            tokens = [t.strip() for t in TOKEN_PRINCIPAL.split(",") if t.strip()]
+        
+        if not tokens:
+            print("❌ CRITIC: Nu am găsit niciun token! Aplicația se va închide.")
+            return
+
+        print(f"📂 Am găsit în total {len(tokens)} token-uri. Pornesc conturile...")
+
+        for i, token in enumerate(tokens):
+            name = f"MainBot_{i}"
+            try:
+                new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
+                setup_bot(new_bot)
+                selfbots[name] = {"token": token, "bot": new_bot}
+                
+                async def safe_start(b, t, idx):
+                    try:
+                        print(f"📡 Încerc logarea pentru contul {idx+1}...")
+                        await b.start(t)
+                    except Exception as e:
+                        print(f"❌ EROARE la contul {idx+1}: {e}")
+
+                asyncio.create_task(safe_start(new_bot, token, i))
+                print(f"🔄 Task creat pentru contul {i+1}/{len(tokens)}...")
+                await asyncio.sleep(2.0)
+            except Exception as e:
+                print(f"⚠️ Nu am putut inițializa botul {i+1}: {e}")
+
+        print("✅ Toate task-urile de pornire au fost create. Mențin loop-ul activ...")
+        
+        # Keep-alive loop pentru Render
+        count = 0
+        while True:
+            await asyncio.sleep(600) # 10 minute
+            count += 10
+            print(f"⏰ Keep-alive: Botul rulează de {count} minute. Conturi în memorie: {len(selfbots)}")
+            
+    except Exception as e:
+        print(f"❌ EROARE FATALĂ în main_run: {e}")
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
+    # Pornim serverul HTTP imediat pentru a satisface verificarea Render
+    threading.Thread(target=run_health_server, daemon=True).start()
+    
+    print("🚀 Pornesc bucla principală asyncio...")
     try:
-        asyncio.run(start_all())
-    except KeyboardInterrupt: pass
+        asyncio.run(main_run())
+    except KeyboardInterrupt:
+        print("🛑 Oprire detectată.")
+    except Exception as e:
+        print(f"❌ Eroare la execuție: {e}")
