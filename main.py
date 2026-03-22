@@ -37,7 +37,7 @@ except ImportError:
     sys.exit(1)
 
 # --- ⚙️ CONFIGURARE ---
-TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GyG-VN.L1YCIb-y7pDldtqsWNXQIr2x2lMxIMtUO5SVyg")
+TOKEN_PRINCIPAL = os.getenv("TOKEN", "MTQ3MjExMjMwMDM0NDQ3OTc2NQ.Ga5XS4.kEzXStYVrUWDCbl3KRlOpGz278zLKsZnkwV3Z4")
 PREFIX = "$"
 
 # Creare structură foldere
