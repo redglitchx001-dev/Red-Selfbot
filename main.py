@@ -32,7 +32,7 @@ for folder in ["music", "profiles"]:
     if not os.path.exists(folder): os.makedirs(folder)
 
 # Configurare AI (Gemini)
-gemini_api_key = os.getenv("AIzaSyCilFHONVZu2nWiONpeFfNt7UEZT0ckGaE")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 if gemini_api_key:
     genai.configure(api_key=gemini_api_key)
     ai_model = genai.GenerativeModel('gemini-pro')
