@@ -253,11 +253,11 @@ $downloadm [url]- Descarcă de pe YouTube
 $dwnlibs        - Vezi lista de piese salvate
 $adfiles        - Salvează MP3 din atașament
 ```""", delete_after=15)
-
- @bot.command()
-    async def hold(ctx):
-        await ctx.message.delete()
-        menu = """```text
+        
+@bot.command()
+async def hold(ctx):
+    await ctx.message.delete()
+    menu = """```text
 --- 🎫 ・ Comenzile Old --- 
 
 ✉️ ・ SPAM BOT:
@@ -267,8 +267,8 @@ $spam [m][n][d]- Repetă text de X ori cu delay
 
 👤 ・ PROFILE ARCHIVER:
 $prfdwn @user  - Descarcă profilul în /profiles
-$prflist        - Meniu pentru profiler
-$show [Nr]      - Arată Poza in chat 
+$prflist       - Meniu pentru profiler
+$show [Nr]     - Arată Poza in chat 
 
 📂 ・ COPIERE & ARHIVARE:
 $clchat [nr]   - Copiază ultimele mesaje + Media
@@ -279,9 +279,8 @@ $pstchat [nr]  - Lipește chat-ul din fișierul X
 $anti-kick     - Protecție kick (on/off)
 $anti-ban      - Protecție ban (on/off)
 $ghostping     - Ping discret @user
-
 ```"""
-        await ctx.send(menu, delete_after=30)
+    await ctx.send(menu, delete_after=30)
 
  @bot.command()
     async def hOwner(ctx):
