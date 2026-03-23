@@ -282,10 +282,10 @@ $ghostping     - Ping discret @user
 ```"""
     await ctx.send(menu, delete_after=30)
 
- @bot.command()
-    async def hOwner(ctx):
-        await ctx.message.delete()
-        await ctx.send("""```text
+@bot.command()
+async def hOwner(ctx):
+    await ctx.message.delete()
+    await ctx.send("""```text
 --- 👑 ・ Owner Only ---
 $selfbot       - Vezi lista de selfbots 
 $selfbot [t][n]- Aduga Selfbot 
