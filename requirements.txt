@@ -2,3 +2,4 @@ discord.py-self
 flask
 google-generativeai
 requests
+yt-dlp
