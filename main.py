@@ -1,9 +1,15 @@
 import discord
 from discord.ext import commands
-limport asyncioimport threadinimport os
+import asyncio
+import threading
+import os
 import datetime
-import requestimport jsonimport randomlimport google.generativeai as genai
+import requests
+import json
+import random
+import google.generativeai as genai
 from flask import Flask
+
 
 # --- SERVER PENTRU RENDER (Keep Alive) ---
 app = Flask('')
