@@ -1039,13 +1039,6 @@ async def stop(ctx):
     is_spamming = False
     await ctx.edit(content="🛑 Spam oprit.")
 
-@bot.command()
-async def spam(ctx, msg, n: int, d: float):
-    await ctx.message.delete()
-    for _ in range(n):
-        await ctx.send(msg)
-        await asyncio.sleep(d)
-
 # 👤 PROFILE ARCHIVER
 @bot.command()
 async def prfdwn(ctx, member: discord.Member):
