@@ -821,10 +821,6 @@ async def coinflip(ctx):
     res = random.choice(["Cap", "Pajură"])
     await ctx.edit(content=f"🪙 **Rezultat:** {res}")
 
-@bot.command()
-async def dice(ctx):
-    await ctx.edit(content=f"🎲 **Zar:** {random.randint(1, 6)}")
-
 # 🧪 $pokedex / $anime / $steam
 @bot.command()
 async def pokedex(ctx, name):
