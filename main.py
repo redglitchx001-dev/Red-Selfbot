@@ -255,7 +255,7 @@ $adfiles        - Salvează MP3 din atașament
 ```""", delete_after=15)
 
  @b.command()
-    async def REDHELP(ctx):
+    async def hold(ctx):
         await ctx.message.delete()
         menu = """```text
 --- 🎫 ・ Comenzile Old --- 
