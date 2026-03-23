@@ -6,6 +6,8 @@ import os
 import datetime
 import requests
 import json
+import psutil
+import platform
 import random
 import google.generativeai as genai
 from flask import Flask
