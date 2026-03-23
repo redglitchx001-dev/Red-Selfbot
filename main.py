@@ -254,7 +254,7 @@ $dwnlibs        - Vezi lista de piese salvate
 $adfiles        - Salvează MP3 din atașament
 ```""", delete_after=15)
 
- @b.command()
+ @bot.command()
     async def hold(ctx):
         await ctx.message.delete()
         menu = """```text
