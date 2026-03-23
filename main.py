@@ -790,10 +790,6 @@ async def mock(ctx, *, text):
 async def clap(ctx, *, text):
     await ctx.edit(content=text.replace(" ", " 👏 "))
 
-@bot.command()
-async def reverse(ctx, *, text):
-    await ctx.edit(content=text[::-1])
-
 # 💎 $aesthetic / $upper / $lower
 @bot.command()
 async def aesthetic(ctx, *, text):
@@ -812,7 +808,7 @@ async def lower(ctx, *, text):
 @bot.command()
 async def color(ctx, hex_code):
     hex_code = hex_code.replace("#", "")
-    url = f"https://singlecolorimage.com/get/{hex_code}/200x100"
+    url = f"https://singlecolorimge.com/get/{hex_code}/200x100"
     await ctx.edit(content=f"🎨 **Culoare: #{hex_code}**\n{url}")
 
 # 🎲 $coinflip / $8ball / $dice
