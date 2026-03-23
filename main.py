@@ -1178,7 +1178,7 @@ if __name__ == "__main__":
     token = os.getenv("DISCORD_TOKEN")
     if token:
         try:
-            bot.run(token, bot=False)
+            bot.run(token)
         except Exception as e:
             print(f"❌ EROARE: {e}")
     else:
