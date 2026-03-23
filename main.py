@@ -1058,11 +1058,6 @@ async def calc(ctx, *, expr):
     await ctx.edit(content=f"🔢 **Rezultat:** `{eval(expr)}`")
 
 @bot.command()
-async def whois(ctx, member: discord.Member = None):
-    member = member or ctx.author
-    await ctx.edit(content=f"👤 **{member}**\nID: `{member.id}`\nCreat: `{member.created_at.strftime('%d/%m/%Y')}`")
-
-@bot.command()
 async def firstmsg(ctx):
     async for message in ctx.channel.history(limit=1, oldest_first=True):
         await ctx.edit(content=f"🔗 **Primul mesaj:** {message.jump_url}")
