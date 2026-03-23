@@ -43,10 +43,9 @@ if gemini_api_key:
 # ==========================================
 # ==========================================
 # AICI LIPESTI TU COMENZILE TALE
-# ==========================================
-
-    @bot.command()
-    async def REDHELP(ctx):
+# ===========================================
+@bot.command()
+async def REDHELP(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 --- 📋 ・ MENIU CENTRAL AJUTOR ---
@@ -71,8 +70,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 ------------------------------------------
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hAI(ctx):
+@bot.command()
+async def hAI(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🤖 ・ AI & INTELLIGENCE:
@@ -84,8 +83,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 📖 ・ $wiki [q]      - Wikipedia
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hM(ctx):
+@bot.command()
+async def hM(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🛡️ ・ MODERATION & SERVER:
@@ -101,8 +100,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 💥 ・ $nuke          - Recreează canalul
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hgame(ctx):
+@bot.command()
+async def hgame(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🎮 ・ GAMES & FUN:
@@ -114,8 +113,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 🎰 ・ $slots / $mines- Jocuri noroc
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hutils(ctx):
+@bot.command()
+async def hutils(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🛠️ ・ UTILS & TOOLS:
@@ -129,8 +128,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 📟 ・ $binary / $hex / $64 / $morse
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hstatus(ctx):
+@bot.command()
+async def hstatus(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 ✨ ・ STATUS & SELF:
@@ -143,8 +142,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 👀 ・ $watching / $listening / $playing
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hT7(ctx):
+@bot.command()
+async def hT7(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🔥 ・ TIER 7 (EXTREME):
@@ -158,8 +157,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 🚀 ・ $webraid [msg] - Toate conturile trimit mesaj
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hXtra(ctx):
+@bot.command()
+async def hXtra(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🌟 ・ EXTRA & IDEAS:
@@ -173,8 +172,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 📱 ・ $iphone [msg]  - Notificare iPhone
 ```""", delete_after=60)
 
-    @bot.command()
-    async def hImage(ctx):
+@bot.command()
+async def hImage(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 💎 ・ IMAGE PROCESSING:
@@ -187,8 +186,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 📜 ・ $wanted @u     - Efect wanted
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hSys(ctx):
+@bot.command()
+async def hSys(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 💻 ・ SYSTEM & NEW FUN:
@@ -200,8 +199,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 🎫 ・ $tokencheck   - Verifică validitate token
 ```""", delete_after=30)
 
-    @bot.command()
-    async def hClon(ctx):
+@bot.command()
+async def hClon(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🏰 ・ SERVER CLONER:
@@ -210,8 +209,8 @@ Credits: RedGlitchX / redglitchx. / XTASK
 🏗️ ・ $psrv [nr] - Aplică backup pe server curent
 ```""", delete_after=15)
 
-    @bot.command()
-    async def hElite(ctx):
+@bot.command()
+async def hElite(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🎭 ・ ELITE & STEALTH COMMANDS:
@@ -242,8 +241,8 @@ $reverse [t]   - Inversează textul
 $bold [t]      - Scrie îngroșat rapid
 ```""", delete_after=60)
 
-    @bot.command()
-    async def helpvc(ctx):
+@bot.command()
+async def helpvc(ctx):
         await ctx.message.delete()
         await ctx.send("""```text
 🎵 ・ VOICE & MUSIC:
