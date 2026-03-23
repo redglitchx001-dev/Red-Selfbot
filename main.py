@@ -7,6 +7,11 @@ import datetime
 import requests
 import json
 import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
+    
 import platform
 import random
 import google.generativeai as genai
