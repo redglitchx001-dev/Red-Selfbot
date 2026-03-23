@@ -808,13 +808,6 @@ async def upper(ctx, *, text):
 async def lower(ctx, *, text):
     await ctx.edit(content=text.lower())
 
-# 📟 $password [n]
-@bot.command()
-async def password(ctx, n: int = 12):
-    chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*"
-    res = "".join(random.choice(chars) for _ in range(n))
-    await ctx.edit(content=f"📟 **Parolă generată:** `{res}`")
-
 # 🎨 $color [hex]
 @bot.command()
 async def color(ctx, hex_code):
