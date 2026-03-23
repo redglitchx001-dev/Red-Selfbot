@@ -822,11 +822,6 @@ async def coinflip(ctx):
     await ctx.edit(content=f"🪙 **Rezultat:** {res}")
 
 @bot.command()
-async def ball8(ctx, *, q):
-    ans = ["Da", "Nu", "Probabil", "Mai întreabă o dată", "Nu cred", "Absolut!"]
-    await ctx.edit(content=f"🎱 **Întrebare:** {q}\n**Răspuns:** {random.choice(ans)}")
-
-@bot.command()
 async def dice(ctx):
     await ctx.edit(content=f"🎲 **Zar:** {random.randint(1, 6)}")
 
