@@ -6,7 +6,7 @@ import os
 import datetime
 import requests
 import json
-import psutil
+import pustil
 try:
     import psutil
 except ImportError:
@@ -16,7 +16,6 @@ import platform
 import random
 import google.generativeai as genai
 from flask import Flask
-
 
 # --- SERVER PENTRU RENDER (Keep Alive) ---
 app = Flask('')
@@ -29,21 +28,21 @@ def run_web():
 
 threading.Thread(target=run_web, daemon=True).start()
 
-# --- CONFIGURARE BOT ---
+# --- CONFIGURARE AUTOMATĂ DIN RENDER ---
+# Aici botul ia numele exact din screenshot-ul tău
+TOKEN = os.getenv("DISCORD_TOKEN") 
+GEMINI_KEY = os.getenv("GEMINI_API_KEY")
+OWNER_ID = 1472112300344479765 
 PREFIX = "$"
+
+# --- INITIALIZARE BOT & AI ---
 bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
 start_time = datetime.datetime.utcnow()
 
-# Creare foldere necesare dacă nu există
-for folder in ["music", "profiles"]:
-    if not os.path.exists(folder): os.makedirs(folder)
-
-# Configurare AI (Gemini)
-gemini_api_key = os.getenv("GEMINI_API_KEY")
-if gemini_api_key:
-    genai.configure(api_key=gemini_api_key)
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
     ai_model = genai.GenerativeModel('gemini-pro')
-
+    
 # ==========================================
 # ACUM LIPESTE AICI TOATE TXT-URILE TALE
 # (Inclusiv "Owner Only.txt" care are ID-ul)
