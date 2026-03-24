@@ -1158,23 +1158,23 @@ async def selfbotr(ctx, name: str):
         await ctx.edit(content="❌ Numele nu există în listă.")
 
 # ==========================================
-# LOGICA DE PORNIRE
+# 🚀 PORNIRE AUTOMATĂ
 # ==========================================
 
 @bot.event
 async def on_ready():
+    print("----------------------------")
     print(f"✅ LOGAT CA: {bot.user.name}")
-    print(f"📡 PORT RENDER: 8080")
+    print(f"🤖 GEMINI AI: {'ACTIVAT' if GEMINI_KEY else 'DEZACTIVAT'}")
+    print("----------------------------")
 
 if __name__ == "__main__":
-    # Citim token-ul din Environment Variables de pe Render
-    token = os.getenv("DISCORD_TOKEN")
-    if token:
+    if TOKEN:
         try:
-            bot.run(token)
+            # Pornim folosind variabila TOKEN luată din Render
+            bot.run(TOKEN)
         except Exception as e:
             print(f"❌ EROARE: {e}")
     else:
-        print("⚠️ EROARE: Nu am găsit DISCORD_TOKEN pe Render!")
-
-
+        print("❌ EROARE: Render nu a găsit 'DISCORD_TOKEN' în Environment Variables!")
+        
