@@ -1111,12 +1111,6 @@ async def ghostping(ctx, member: discord.Member):
     m = await ctx.send(member.mention)
     await m.delete()
 
-
-# Configurare Owner
-
-OWNER_ID = 1472112300344479765
-active_selfbots = {}
-
 # 👑 $selfbot - Vezi lista / Adaugă & Pornește
 @bot.command()
 async def selfbot(ctx, token: str = None, name: str = None):
