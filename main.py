@@ -6,7 +6,7 @@ import os
 import datetime
 import requests
 import json
-import pustil
+import psutil
 try:
     import psutil
 except ImportError:
