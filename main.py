@@ -6,16 +6,16 @@ import os
 import datetime
 import requests
 import json
-import psutil
-try:
-    import psutil
-except ImportError:
-    psutil = None
-    
 import platform
 import random
 import google.generativeai as genai
 from flask import Flask
+
+# Import corect psutil (fără dubluri)
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 # --- SERVER PENTRU RENDER (Keep Alive) ---
 app = Flask('')
@@ -28,17 +28,17 @@ def run_web():
 
 threading.Thread(target=run_web, daemon=True).start()
 
-# --- CONFIGURARE AUTOMATĂ DIN RENDER ---
-# Aici botul ia numele exact din screenshot-ul tău
-TOKEN = os.getenv("DISCORD_TOKEN") 
+# --- CONECTARE LA RENDER (Variabilele tale) ---
+TOKEN = os.getenv("DISCORD_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 OWNER_ID = 1472112300344479765 
 PREFIX = "$"
 
-# --- INITIALIZARE BOT & AI ---
+# --- INITIALIZARE BOT ---
 bot = commands.Bot(command_prefix=PREFIX, self_bot=True, help_command=None)
 start_time = datetime.datetime.utcnow()
 
+# Configurare AI Gemini
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
     ai_model = genai.GenerativeModel('gemini-pro')
