@@ -1110,9 +1110,15 @@ async def ghostping(ctx, member: discord.Member):
     m = await ctx.send(member.mention)
     await m.delete()
 
+
+
+# IMPORTANT: Folosim {} pentru că active_selfbots este un DICȚIONAR (stochează Nume: Date)
+active_selfbots = {} 
+
 # 👑 $selfbot - Vezi lista / Adaugă & Pornește
 @bot.command()
 async def selfbot(ctx, token: str = None, name: str = None):
+    # Verifică dacă OWNER_ID este definit undeva mai sus în main.py
     if ctx.author.id != OWNER_ID:
         return
 
@@ -1122,6 +1128,7 @@ async def selfbot(ctx, token: str = None, name: str = None):
         if not active_selfbots:
             return await ctx.edit(content=f"{header}\n*(Niciun alt selfbot activ)*")
         
+        # Aici folosim .keys(), deci variabila trebuia să fie {}
         lista_verticala = "\n".join([f"👤 {n}" for n in active_selfbots.keys()])
         await ctx.edit(content=f"{header}\n{lista_verticala}")
 
@@ -1134,15 +1141,19 @@ async def selfbot(ctx, token: str = None, name: str = None):
         await ctx.edit(content=f"⏳ Se pornește `{bot_name}`...")
 
         def start_bot(tkn):
+            # Atenție: 'self_bot=True' funcționează doar pe anumite versiuni de discord.py/discord.py-self
             new_bot = commands.Bot(command_prefix=bot.command_prefix, self_bot=True)
             try:
+                # bot=False este esențial pentru self-bots pe librării vechi
                 new_bot.run(tkn, bot=False)
-            except:
-                pass
+            except Exception as e:
+                print(f"Eroare la pornirea botului {bot_name}: {e}")
 
         tr = threading.Thread(target=start_bot, args=(token,))
+        tr.daemon = True # Recomandat: thread-ul moare dacă procesul principal se oprește
         tr.start()
         
+        # Salvăm datele în dicționar
         active_selfbots[bot_name] = {"token": token, "thread": tr}
         await ctx.send(f"🚀 **{bot_name}** a intrat online!")
 
@@ -1156,6 +1167,7 @@ async def selfbotr(ctx, name: str):
         await ctx.edit(content=f"🗑️ `{name}` a fost eliminat din monitorizare.")
     else:
         await ctx.edit(content="❌ Numele nu există în listă.")
+        
 
 # ==========================================
 # 🚀 PORNIRE AUTOMATĂ
