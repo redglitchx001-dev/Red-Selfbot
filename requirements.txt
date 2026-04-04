@@ -1,0 +1,10 @@
+discord.py-self
+google-generativeai
+aiohttp
+Pillow
+qrcode
+flask
+python-dotenv
+pyfiglet
+simpleeval
+requests
