@@ -13,8 +13,12 @@ from io import BytesIO
 from PIL import Image, ImageFilter
 import google.generativeai as genai
 
-# --- CONFIG ---
-TOKEN = sys.argv[1] if len(sys.argv) > 1 else ""
+# --- CONFIG ---# Păstrăm numele TOKEN așa cum ai cerut
+TOKEN = os.getenv("MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GMKOq5.LEhnhtdlP7-ggp4myLmwA1_INehJiinObfELsk")
+
+# Creăm o listă internă (invizibilă) ca să le poată citi pe rând
+TOKEN_LIST = [t.strip() for t in TOKEN.split(",") if t.strip()]
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if GEMINI_API_KEY:
