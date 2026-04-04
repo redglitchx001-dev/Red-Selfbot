@@ -12,6 +12,24 @@ import base64
 from io import BytesIO
 from PIL import Image, ImageFilter
 import google.generativeai as genai
+import os
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Botul e viu!"
+
+def run():
+    # Render îți dă portul automat prin variabila de sistem PORT
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 # --- CONFIG ---# Păstrăm numele TOKEN așa cum ai cerut
 TOKEN = os.getenv("MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GMKOq5.LEhnhtdlP7-ggp4myLmwA1_INehJiinObfELsk")
@@ -622,26 +640,35 @@ async def invert(ctx, member: discord.Member = None):
                 img_bin.seek(0)
                 await ctx.send(file=discord.File(img_bin, "invert.png"))
 
-# --- SYS ---
-
-@bot.command()
-async def sysinfo(ctx):
-    await ctx.message.delete()
-    await ctx.send(f"🌡️ **System Info:**\n**Platform:** {platform.system()}\n**Arch:** {platform.machine()}\n**Python:** {platform.python_version()}")
-
-@bot.command()
-async def neko(ctx):
-    await ctx.message.delete()
-    async with aiohttp.ClientSession() as session:
-        async with session.get("https://nekos.life/api/v2/img/neko") as r:
-            data = await r.json()
-            await ctx.send(data["url"])
+# --- LOGICA DE PORNIRE (MULTI-ACCOUNT) ---
 
 @bot.event
-async def on_command_error(ctx, error):
-    if isinstance(error, commands.CommandNotFound):
-        return
-    await ctx.send(f"❌ Error: {str(error)}")
+async def on_ready():
+    print(f"✅ Logat ca: {bot.user.name} (ID: {bot.user.id})")
+    print(f"🚀 Prefix: {bot.command_prefix}")
+    print("---")
 
-start_time = time.time()
-bot.run(TOKEN, bot=False)
+if __name__ == "__main__":
+    # 1. Pornim Web Server-ul (dacă ai funcția keep_alive definită)
+    if 'keep_alive' in globals():
+        keep_alive()
+
+    # 2. Împărțim variabila TOKEN în bucăți (cele 25 de tokene)
+    # TOKEN conține acum: "tk1,tk2,tk3..."
+    TOKEN_LIST = [t.strip() for t in TOKEN.split(",") if t.strip()]
+    
+    print(f"📦 Am detectat {len(TOKEN_LIST)} tokene în variabila TOKEN.")
+
+    # 3. Luăm fiecare token la rând
+    for i, tk in enumerate(TOKEN_LIST):
+        try:
+            print(f"🔄 [Cont {i+1}] Se încearcă logarea...")
+            # Rulăm botul. Am scos 'bot=False' ca să nu dea eroare de argument
+            bot.run(tk) 
+        except discord.errors.LoginFailure:
+            print(f"⚠️ [Cont {i+1}] TOKEN INVALID/EXPIRAT! Sar peste el...")
+            continue # ASTA previne "Crashed State" pe Spaceify
+        except Exception as e:
+            print(f"❌ [Cont {i+1}] Eroare neașteptată: {e}")
+            continue
+            
