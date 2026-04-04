@@ -31,11 +31,15 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# --- CONFIG ---# Păstrăm numele TOKEN așa cum ai cerut
-TOKEN = os.getenv("MTQ3MjExMjMwMDM0NDQ3OTc2NQ.GMKOq5.LEhnhtdlP7-ggp4myLmwA1_INehJiinObfELsk")
+# Luăm tokenele. Dacă nu găsește nimic, punem un text gol "" în loc de None
+TOKEN = os.getenv("TOKEN", "")
 
-# Creăm o listă internă (invizibilă) ca să le poată citi pe rând
-TOKEN_LIST = [t.strip() for t in TOKEN.split(",") if t.strip()]
+# Verificăm dacă TOKEN are ceva în el înainte să dăm split
+if TOKEN:
+    TOKEN_LIST = [t.strip() for t in TOKEN.split(",") if t.strip()]
+else:
+    TOKEN_LIST = []
+    print("❌ EROARE: Nu am găsit niciun token în Environment Variables!")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
