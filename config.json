@@ -1,0 +1,20 @@
+{
+    "token": "YOUR_DISCORD_TOKEN_HERE",
+    "prefix": ".",
+    "remote-users": [],
+    "autoreply": {
+        "messages": [
+            "https://github.com/AstraaDev/Discord-SelfBot",
+            "https://discord.gg/PKR7nM9j9U"
+        ],
+        "channels": [],
+        "users": []
+    },
+    "afk": {
+        "enabled": false,
+        "message": "I am currently AFK. I will respond as soon as possible!"
+    },
+    "copycat": {
+        "users": []
+    }
+}
