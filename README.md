@@ -11,6 +11,9 @@
   <a href="https://github.com/python/cpython">
     <img src="https://img.shields.io/badge/Python-3.10+-blue.svg?style=flat-square" alt="Python Version">
   </a>
+  <a href="https://discord.gg/sYecbhRYfk">
+    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?style=flat-square&logo=discord" alt="Discord">
+  </a>
   <a href="https://github.com/RedGlitchX/Red-SelfBot">
     <img src="https://img.shields.io/badge/Security-Verified-success?style=flat-square" alt="Security">
   </a>
