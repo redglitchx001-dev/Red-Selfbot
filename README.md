@@ -2,7 +2,7 @@
   <img src="https://i.postimg.cc/cCG6WF7W/5aaa7b437881d00f0521f9e09dbf39e2.jpg" alt="Red SelfBot Banner">
 </p>
 
-<h1 align="center">Red SelfBot - v1</h1>
+<h1 align="center">Red Tool - v1</h1>
 
 <p align="center">
   <a href="https://github.com/RedGlitchX/Red-SelfBot/blob/main/LICENSE">
