@@ -28,8 +28,8 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix='$', intents=intents, self_bot=True)
+intents = discord.Intents.detaful()
+bot = commands.Bot(command_prefix='$', self_bot=True)
 bot.remove_command('help')
 
 start_time = time.time()
