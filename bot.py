@@ -28,7 +28,7 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-intents = discord.Intents.detaful()
+intents = discord.Intents.default()
 intents.members = True
 bot = commands.Bot(command_prefix='$', self_bot=True)
 bot.remove_command('help')
