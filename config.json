@@ -1,0 +1,18 @@
+{
+    "bot_settings": {
+        "prefix": "$",
+        "delete_after": 60,
+        "embed_color": "0xff0000"
+    },
+    "features": {
+        "auto_delete_help": true,
+        "stealth_mode": true,
+        "log_commands": false
+    },
+    "limits": {
+        "max_spam": 50,
+        "max_ghostspam": 20,
+        "max_purge": 1000,
+        "typing_max_seconds": 60
+    }
+}
