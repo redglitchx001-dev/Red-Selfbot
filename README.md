@@ -5,11 +5,14 @@
 <h1 align="center">Red SelfBot - v1</h1>
 
 <p align="center">
-  <a href="https://github.com/AstraaDev/Discord-SelfBot/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-MIT-red.svg?style=flat-square" alt="License">
+  <a href="https://github.com/RedGlitchX/Red-SelfBot/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/License-Private-red.svg?style=flat-square" alt="License">
   </a>
   <a href="https://github.com/python/cpython">
-    <img src="https://img.shields.io/badge/Python-3.8+-blue.svg?style=flat-square" alt="Python Version">
+    <img src="https://img.shields.io/badge/Python-3.10+-blue.svg?style=flat-square" alt="Python Version">
+  </a>
+  <a href="https://github.com/RedGlitchX/Red-SelfBot">
+    <img src="https://img.shields.io/badge/Security-Verified-success?style=flat-square" alt="Security">
   </a>
 </p>
 
