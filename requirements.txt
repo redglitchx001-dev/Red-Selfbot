@@ -1,6 +1,0 @@
-requests
-colorama
-discord.py-self
-gtts
-qrcode
-pyfiglet
