@@ -28,15 +28,8 @@ GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
-intents = discord.Intents.default()
-intents.members = True
-try:
-    intents = discord.Intents.default()
-    intents.members = True
-except AttributeError:
-    intents = None # Pentru versiunile de self-bot care nu suportă Intents
-
-bot = commands.Bot(command_prefix="!", self_bot=True, intents=intents)
+# Șterge tot ce ține de intents și folosește doar asta:
+bot = commands.Bot(command_prefix="$", self_bot=True)
 bot.remove_command('help')
 
 start_time = time.time()
