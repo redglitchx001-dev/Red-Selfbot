@@ -30,7 +30,13 @@ if GEMINI_API_KEY:
 
 intents = discord.Intents.default()
 intents.members = True
-bot = commands.Bot(command_prefix='$', self_bot=True)
+try:
+    intents = discord.Intents.default()
+    intents.members = True
+except AttributeError:
+    intents = None # Pentru versiunile de self-bot care nu suportă Intents
+
+bot = commands.Bot(command_prefix="!", self_bot=True, intents=intents)
 bot.remove_command('help')
 
 start_time = time.time()
