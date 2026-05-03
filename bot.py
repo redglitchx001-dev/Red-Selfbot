@@ -45,7 +45,7 @@ if GEMINI_API_KEY:
     genai.configure(api_key=GEMINI_API_KEY)
 
 # Șterge tot ce ține de intents și folosește doar asta:
-bot = commands.Bot(command_prefix="$", self_bot=True)
+bot = commands.Bot(command_prefix="$", self_bot=True, intents=None)
 bot.remove_command('help')
 
 start_time = time.time()
