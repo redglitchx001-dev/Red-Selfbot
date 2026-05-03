@@ -38,7 +38,7 @@ def keep_alive():
 
 load_dotenv()
 
-TOKEN = os.getenv('MTQ3MjExMjMwMDM0NDQ3OTc2NQ.G6fuUJ.0WE7KxeArp102Ji9yGh__aSszvdFJ_iQ3uC3BA')
+TOKEN = os.getenv('DISCORD_TOKEN')
 GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
 
 if GEMINI_API_KEY:
