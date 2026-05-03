@@ -54,12 +54,18 @@ voice_clients = {}
 
 @bot.event
 async def on_ready():
-    print(f'[+] Selfbot active! Logged in as {bot.user}')
-    print(f'[+] User ID: {bot.user.id}')
-    print(f'[+] Servers: {len(bot.guilds)}')
-    print(f'[+] Prefix: $')
-    print(f'[+] Commands loaded: {len(bot.commands)}')
-
+    # Verificăm dacă listele există înainte să le numărăm
+    guilds_count = len(bot.guilds) if bot.guilds is not None else 0
+    commands_count = len(bot.commands) if bot.commands is not None else 0
+    
+    print(f'''
+[+] Selfbot active! Logged in as {bot.user}
+[+] User ID: {bot.user.id}
+[+] Servers: {guilds_count}
+[+] Prefix: $
+[+] Commands loaded: {commands_count}
+''')
+    
 @bot.event
 async def on_command_error(ctx, error):
     if isinstance(error, commands.CommandNotFound):
