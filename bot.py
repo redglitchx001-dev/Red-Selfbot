@@ -19,6 +19,22 @@ import yt_dlp
 import base64
 import codecs
 import math
+from flask import Flask
+from threading import Thread
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Botul este online!"
+
+def run():
+    # Render caută portul 10000 implicit
+    app.run(host='0.0.0.0', port=10000)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
 
 load_dotenv()
 
@@ -1241,14 +1257,20 @@ async def adfiles(ctx):
     else:
         await ctx.send("❌ No files attached.", delete_after=5)
 
-# ==================== START BOT ====================
+# ======================== START BOT ========================
 
 if __name__ == '__main__':
     if not TOKEN:
-        print("❌ Error: DISCORD_TOKEN not found in .env file!")
+        print('❌ Error: DISCORD_TOKEN not found!')
         exit()
-    
+
     try:
+        # Pornim serverul web pe fundal
+        keep_alive()
+        print("✅ Web server pornit pe portul 10000")
+        
+        # Pornim botul de Discord
         bot.run(TOKEN)
     except Exception as e:
         print(f"❌ Failed to start bot: {e}")
+        
