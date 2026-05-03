@@ -1260,8 +1260,9 @@ async def adfiles(ctx):
 # ======================== START BOT ========================
 
 if __name__ == '__main__':
-    if not TOKEN:
-        print('❌ Error: DISCORD_TOKEN not found!')
+    # AICI e buba: Folosește variabila TOKEN (cea definită sus cu os.getenv)
+    if not TOKEN: 
+        print('❌ Error: TOKEN is empty! Check Render Environment Variables.')
         exit()
 
     try:
@@ -1269,8 +1270,8 @@ if __name__ == '__main__':
         keep_alive()
         print("✅ Web server pornit pe portul 10000")
         
-        # Pornim botul de Discord
-        bot.run(DISCORD_TOKEN)
+        # Pornim botul folosind variabila care conține codul tău
+        bot.run(TOKEN)
     except Exception as e:
         print(f"❌ Failed to start bot: {e}")
         
