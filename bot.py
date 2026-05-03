@@ -1270,7 +1270,7 @@ if __name__ == '__main__':
         print("✅ Web server pornit pe portul 10000")
         
         # Pornim botul de Discord
-        bot.run(TOKEN)
+        bot.run(DISCORD_TOKEN)
     except Exception as e:
         print(f"❌ Failed to start bot: {e}")
         
