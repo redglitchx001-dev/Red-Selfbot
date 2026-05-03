@@ -54,16 +54,16 @@ voice_clients = {}
 
 @bot.event
 async def on_ready():
-    # Verificăm dacă listele există înainte să le numărăm
-    guilds_count = len(bot.guilds) if bot.guilds is not None else 0
-    commands_count = len(bot.commands) if bot.commands is not None else 0
+    # Folosim getattr ca să evităm eroarea dacă bot.guilds e None
+    guilds = getattr(bot, 'guilds', [])
+    commands_list = getattr(bot, 'commands', [])
     
     print(f'''
 [+] Selfbot active! Logged in as {bot.user}
 [+] User ID: {bot.user.id}
-[+] Servers: {guilds_count}
+[+] Servers: {len(guilds) if guilds else 0}
 [+] Prefix: $
-[+] Commands loaded: {commands_count}
+[+] Commands loaded: {len(commands_list) if commands_list else 0}
 ''')
     
 @bot.event
