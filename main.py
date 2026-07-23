@@ -63,7 +63,7 @@ def run_server():
     server.serve_forever()
 
 # --- ⚙️ CONFIGURATION ---
-TOKEN_PRINCIPAL = os.getenv("DISCORD_TOKEN")
+TOKEN_PRINCIPAL = os.getenv("DISCORD_TOKEN", "")
 PREFIX = "$"
 
 # Create folder structure
@@ -242,7 +242,8 @@ $adfiles         - Upload MP3 (attachment)
         await ctx.message.delete()
         spamming = True
         if not os.path.exists("botjura.txt"):
-            with open("botjura.txt", "w", encoding="utf-8") as f: f.write("RED-SELFBOT ON TOP\n")
+            with open("botjura.txt", "w", encoding="utf-8") as f:
+                f.write("RED-SELFBOT ON TOP\n")
         with open("botjura.txt", "r", encoding="utf-8") as f:
             lines = [l.strip() for l in f.readlines() if l.strip()]
         while spamming:
@@ -523,4 +524,159 @@ $adfiles         - Upload MP3 (attachment)
         await ctx.message.delete()
         fname = f"archives/chat_{ctx.channel.id}.txt"
         with open(fname, "w", encoding="utf-8") as f:
- 
+            async for m in ctx.channel.history(limit=amount):
+                f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
+        await ctx.send(f"📂 Chat saved to `{fname}`", delete_after=10)
+
+    @b.command()
+    async def clist(ctx):
+        await ctx.message.delete()
+        files = os.listdir("archives")
+        await ctx.send(f"📂 **Archives:** `{files}`", delete_after=15)
+
+    @b.command()
+    async def pstchat(ctx, channel_id: str):
+        await ctx.message.delete()
+        path = f"archives/chat_{channel_id}.txt"
+        if not os.path.exists(path): return await ctx.send("❌ Archive not found!", delete_after=5)
+        with open(path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        for line in lines[-10:]:
+            await ctx.send(line.strip())
+            await asyncio.sleep(0.5)
+
+    @b.command(name="anti-kick")
+    async def anti_kick_cmd(ctx):
+        nonlocal anti_kick
+        await ctx.message.delete()
+        anti_kick = not anti_kick
+        status = "ENABLED" if anti_kick else "DISABLED"
+        await ctx.send(f"🛡️ Anti-Kick: **{status}**", delete_after=5)
+
+    @b.command(name="anti-ban")
+    async def anti_ban_cmd(ctx):
+        nonlocal anti_ban
+        await ctx.message.delete()
+        anti_ban = not anti_ban
+        status = "ENABLED" if anti_ban else "DISABLED"
+        await ctx.send(f"🛡️ Anti-Ban: **{status}**", delete_after=5)
+
+    @b.command()
+    async def ghostping(ctx, user: discord.Member):
+        await ctx.message.delete()
+        m = await ctx.send(user.mention)
+        await m.delete()
+
+    @b.command()
+    async def tokencheck(ctx, token: str):
+        await ctx.message.delete()
+        r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": token})
+        res = "✅ Valid" if r.status_code == 200 else "❌ Invalid"
+        await ctx.send(f"🎫 Token Status: {res}", delete_after=10)
+
+    @b.command()
+    async def logchat(ctx):
+        nonlocal log_chat_active
+        await ctx.message.delete()
+        log_chat_active = not log_chat_active
+        status = "ENABLED" if log_chat_active else "DISABLED"
+        await ctx.send(f"📜 Chat Logger: **{status}**", delete_after=5)
+
+    @b.command()
+    async def logdm(ctx):
+        nonlocal log_dm_active
+        await ctx.message.delete()
+        log_dm_active = not log_dm_active
+        status = "ENABLED" if log_dm_active else "DISABLED"
+        await ctx.send(f"📜 DM Logger: **{status}**", delete_after=5)
+
+    @b.command()
+    async def sniped(ctx):
+        await ctx.message.delete()
+        data = snipe_data.get(ctx.channel.id)
+        if data: await ctx.send(data, delete_after=15)
+        else: await ctx.send("❌ Nothing to recover.", delete_after=5)
+
+    @b.command()
+    async def track(ctx, user: discord.Member):
+        nonlocal tracked_users
+        await ctx.message.delete()
+        if user.id in tracked_users:
+            tracked_users.remove(user.id)
+            await ctx.send(f"👁️ Stopped tracking: `{user.name}`", delete_after=5)
+        else:
+            tracked_users.add(user.id)
+            await ctx.send(f"👁️ Now tracking: `{user.name}`", delete_after=5)
+
+    @b.command()
+    async def stats(ctx, *, text: str):
+        await ctx.message.delete()
+        activity = discord.Game(name=text)
+        await b.change_presence(activity=activity)
+        await ctx.send(f"✨ Status updated: `{text}`", delete_after=5)
+
+    @b.command()
+    async def live(ctx, *, text: str):
+        await ctx.message.delete()
+        activity = discord.Streaming(name=text, url="https://twitch.tv/twitch")
+        await b.change_presence(activity=activity)
+        await ctx.send(f"🟣 Streaming status set: `{text}`", delete_after=5)
+
+    @b.command()
+    async def remstats(ctx):
+        await ctx.message.delete()
+        await b.change_presence(activity=None)
+        await ctx.send("✨ Status cleared.", delete_after=5)
+
+    @b.command()
+    async def selfbot(ctx, token_nou: str = None, nume: str = None):
+        await ctx.message.delete()
+        if not token_nou:
+            if not selfbots:
+                return await ctx.send("🤖 No other active selfbots in list.", delete_after=5)
+            msg = "🤖 **Active Accounts:**\n```text\n"
+            for k in selfbots.keys():
+                msg += f"- {k}\n"
+            msg += "```"
+            return await ctx.send(msg, delete_after=15)
+        
+        nume_bot = nume or f"Bot_{len(selfbots)+1}"
+        if nume_bot in selfbots:
+            return await ctx.send(f"❌ Account `{nume_bot}` already exists!", delete_after=5)
+
+        new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
+        setup_bot(new_bot)
+        selfbots[nume_bot] = new_bot
+
+        async def run_new():
+            try:
+                await new_bot.start(token_nou)
+            except Exception as e:
+                print(f"Selfbot error {nume_bot}: {e}")
+
+        threading.Thread(target=lambda: asyncio.run(run_new()), daemon=True).start()
+        await ctx.send(f"✅ Added and started account: `{nume_bot}`", delete_after=5)
+
+    @b.command()
+    async def selfbotr(ctx, nume: str):
+        await ctx.message.delete()
+        if nume in selfbots:
+            bot_instance = selfbots[nume]
+            await bot_instance.close()
+            del selfbots[nume]
+            await ctx.send(f"🗑️ Account `{nume}` removed from list.", delete_after=5)
+        else:
+            await ctx.send(f"❌ Account `{nume}` not found.", delete_after=5)
+
+if __name__ == "__main__":
+    # Start background HTTP server for Render (port & HTML check)
+    threading.Thread(target=run_server, daemon=True).start()
+
+    token = os.environ.get("DISCORD_TOKEN") or TOKEN_PRINCIPAL
+    if not token:
+        print("❌ Error: Discord token is missing from environment variables or configuration!")
+    else:
+        token = token.strip().strip('"').strip("'")
+        bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
+        setup_bot(bot)
+        bot.run(token)
