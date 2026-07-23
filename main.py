@@ -2,7 +2,7 @@
 import sys, types, os, asyncio, json, threading, shutil, requests, datetime
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-# --- 🚀 CRITICAL PATCHES FOR PYTHON 3.13 & ANDROID ---
+# --- 🚀 CRITICAL PATCHES FOR PYTHON 3.13/3.14 & ANDROID ---
 def apply_patches():
     for mod_name in ["cgi", "pipes", "audioop"]:
         if mod_name not in sys.modules:
@@ -63,7 +63,6 @@ def run_server():
     server.serve_forever()
 
 # --- ⚙️ CONFIGURATION ---
-TOKEN_PRINCIPAL = os.getenv("DISCORD_TOKEN", "")
 PREFIX = "$"
 
 # Create folder structure
@@ -73,7 +72,6 @@ for f in ["music", "profiles", "clones", "archives", "logs"]:
 selfbots = {} 
 
 def setup_bot(b):
-    # State variables per bot instance
     log_chat_active = False
     log_dm_active = False
     anti_kick = False
@@ -84,16 +82,13 @@ def setup_bot(b):
 
     @b.event
     async def on_message(message):
-        # Snipe logger setup
         if message.guild and message.author != b.user:
             snipe_data[message.channel.id] = f"[{message.author}] {message.content}"
 
-        # Chat logger setup
         if log_chat_active and message.guild and message.author != b.user:
             with open(f"logs/chat_{message.channel.id}.txt", "a", encoding="utf-8") as f:
                 f.write(f"[{message.created_at}] {message.author}: {message.content}\n")
 
-        # DM logger setup
         if log_dm_active and not message.guild and message.author != b.user:
             with open(f"logs/dm_{message.author.id}.txt", "a", encoding="utf-8") as f:
                 f.write(f"[{message.created_at}] {message.author}: {message.content}\n")
@@ -655,7 +650,7 @@ $adfiles         - Upload MP3 (attachment)
                 print(f"Selfbot error {nume_bot}: {e}")
 
         threading.Thread(target=lambda: asyncio.run(run_new()), daemon=True).start()
-        await ctx.send(f"✅ Added and started account: `{nume_bot}`", delete_after=5)
+        await ctx.send(f"✅ Added and started account: `{nume_bot}`", delete_shell=True)
 
     @b.command()
     async def selfbotr(ctx, nume: str):
@@ -668,15 +663,26 @@ $adfiles         - Upload MP3 (attachment)
         else:
             await ctx.send(f"❌ Account `{nume}` not found.", delete_after=5)
 
-if __name__ == "__main__":
+async def main():
     # Start background HTTP server for Render (port & HTML check)
     threading.Thread(target=run_server, daemon=True).start()
 
-    token = os.environ.get("DISCORD_TOKEN") or TOKEN_PRINCIPAL
+    token = os.environ.get("DISCORD_TOKEN")
     if not token:
-        print("❌ Error: Discord token is missing from environment variables or configuration!")
-    else:
-        token = token.strip().strip('"').strip("'")
-        bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
-        setup_bot(bot)
-        bot.run(token)
+        print("❌ Error: DISCORD_TOKEN environment variable is missing!")
+        return
+    
+    token = token.strip().strip('"').strip("'")
+    bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
+    setup_bot(bot)
+    
+    async with bot:
+        await bot.start(token)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())
