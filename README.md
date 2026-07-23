@@ -12,7 +12,7 @@
   <a href="https://github.com/python/cpython">
     <img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square" alt="Python Version">
   </a>
-  <a href="https://discord.gg/sYecbhRYfk">
+  <a href="https://discord.gg/hzQ8tjh8NT">
     <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?style=flat-square&logo=discord" alt="Discord">
   </a>
   <a href="https://github.com/RedGlitchX/Red-SelfBot">
