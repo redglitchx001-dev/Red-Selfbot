@@ -157,6 +157,7 @@ $REDHELP        - Complete menu (visible 30s)
 
 ------------------------------------------
 Credits: RedGlitchX / redglitchx. / XTASK 
+          xs7david /   @193.7    / NTASK
 ------------------------------------------
 ```"""
         await ctx.send(menu, delete_after=30)
