@@ -1,8 +1,13 @@
 # -*- coding: utf-8 -*-
-import sys, types, os, asyncio, json, threading, shutil, requests, datetime
+"""
+RED SELFBOT V1 - Main entry point.
+Premium modular build.
+"""
+import sys, types, os, asyncio, json, threading, time, platform, traceback
 from http.server import HTTPServer, BaseHTTPRequestHandler
+from urllib.parse import urlparse
 
-# --- 🚀 CRITICAL PATCHES FOR PYTHON 3.13/3.14 & ANDROID ---
+# Compatibility patches
 def apply_patches():
     for mod_name in ["cgi", "pipes", "audioop"]:
         if mod_name not in sys.modules:
@@ -14,676 +19,271 @@ def apply_patches():
                 m.quote = lambda x: x
             elif mod_name == "audioop":
                 m.error = Exception
-                for f in ["mul", "add", "bias", "lin2lin", "adpcm2lin", "lin2adpcm", "max", "minmax", "avg", "rms"]:
-                    setattr(m, f, lambda *args, **kwargs: 0 if "lin" not in args else b'')
+                for f in ["mul","add","bias","lin2lin","adpcm2lin","lin2adpcm","max","minmax","avg","rms"]:
+                    setattr(m, f, lambda *a, **k: 0 if "lin" not in a else b'')
             sys.modules[mod_name] = m
     try:
         import discord.settings
-        _orig = discord.settings.Settings.__init__
-        def _patched(self, *, data, state):
-            if data and data.get('friend_source_flags') is None:
-                data['friend_source_flags'] = {}
-            return _orig(self, data=data, state=state)
-        discord.settings.Settings.__init__ = _patched
-    except: pass
+        _o = discord.settings.Settings.__init__
+        def _p(self, *, data, state):
+            if data and data.get("friend_source_flags") is None:
+                data["friend_source_flags"] = {}
+            return _o(self, data=data, state=state)
+        discord.settings.Settings.__init__ = _p
+    except Exception:
+        pass
 
 apply_patches()
-os.environ['no_proxy'] = '*'
+os.environ["no_proxy"] = "*"
 
 try:
     import discord
     from discord.ext import commands
 except ImportError:
-    print("❌ Please install: pip install discord.py-self==1.9.2 requests")
-    sys.exit(1)
+    print("Install: pip install discord.py-self requests PyNaCl"); sys.exit(1)
 
-# --- 🌐 WEB HEALTH CHECK SERVER (FOR RENDER / PORT) ---
-class HealthCheckHandler(BaseHTTPRequestHandler):
+from utils.common import *
+import cmds.help, cmds.text, cmds.fun, cmds.util, cmds.info, cmds.spam, cmds.music
+import cmds.profiles, cmds.cloner, cmds.archives, cmds.protect, cmds.logger, cmds.status, cmds.multi
+import cmds.ai
+
+PREFIX = "$"
+START_TIME = time.time()
+
+# Global state
+selfbots = {}
+bot_meta = {}
+
+# ============================================================
+# DASHBOARD
+# ============================================================
+def dashboard_html(md):
+    up = int(time.time() - md.get("start", START_TIME))
+    uptime_s = fmt_time(up)
+    g = md.get("guilds", 0); u = md.get("users", 0); c = md.get("cmds", 0); p = md.get("ping", 0)
+    un = md.get("name", "unknown"); feat = md.get("feats", {})
+    fhtml = ""
+    fi = [("spam","MSG"),("logchat","LOG"),("logdm","DM"),("voice","VC"),("anti_kick","AK"),("anti_ban","AB")]
+    for k, lbl in fi:
+        on = feat.get(k, False); col = "#00ff88" if on else "#ff3366"; lab = "ON" if on else "OFF"
+        fhtml += f'<div class=fb style=border-color:{col}><b>{lbl}</b> <span style=color:{col}>{lab}</span></div>'
+
+    port = os.environ.get("PORT", "10000")
+    return f"""<!DOCTYPE html><html><head><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1">
+<title>RED SELFBOT V1</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&display=swap');
+*{{margin:0;padding:0;box-sizing:border-box}}
+body{{background:#0a0a0f;color:#ddd;font-family:'JetBrains Mono',monospace;min-height:100vh}}
+body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,0,60,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,60,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}}
+.wrap{{position:relative;z-index:1;max-width:1100px;margin:0 auto;padding:30px 20px}}
+.hdr{{text-align:center;padding:30px;background:linear-gradient(135deg,rgba(255,0,60,.08),rgba(120,0,30,.04));border:1px solid rgba(255,0,60,.3);border-radius:14px;margin-bottom:30px;position:relative;overflow:hidden}}
+.hdr::before{{content:'';position:absolute;inset:-2px;background:conic-gradient(from 0deg,transparent,rgba(255,0,60,.15),transparent,rgba(255,0,60,.08),transparent);animation:rot 6s linear infinite}}
+@keyframes rot{{to{{transform:rotate(360deg)}}}}
+.hdr>*{{position:relative;z-index:1}}
+.logo{{font-family:'Orbitron',sans-serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:900;background:linear-gradient(135deg,#ff0044,#ff6688);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:6px}}
+.sub{{color:#666;font-size:.75rem;letter-spacing:5px;margin-top:6px}}
+.pulse{{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:6px 16px;border:1px solid rgba(0,255,136,.4);border-radius:50px;font-size:.8rem;color:#00ff88}}
+.dot{{width:8px;height:8px;border-radius:50%;background:#00ff88;box-shadow:0 0 8px #00ff88;animation:pu 2s infinite}}
+@keyframes pu{{0%,100%{{opacity:1;transform:scale(1)}}50%{{opacity:.4;transform:scale(1.5)}}}}
+.card{{background:linear-gradient(135deg,rgba(30,30,45,.8),rgba(20,20,30,.9));border:1px solid rgba(255,0,60,.2);border-radius:12px;padding:24px;margin-bottom:24px;backdrop-filter:blur(8px)}}
+.uc{{display:flex;align-items:center;gap:20px}}
+.av{{width:70px;height:70px;border-radius:50%;background:linear-gradient(135deg,#ff0044,#660022);display:flex;align-items:center;justify-content:center;font-family:'Orbitron';font-size:1.8rem;font-weight:900;color:#fff;border:3px solid #ff0044;box-shadow:0 0 20px rgba(255,0,60,.4)}}
+.un{{font-family:'Orbitron';font-size:1.3rem;color:#fff}}
+.tag{{color:#666;font-size:.8rem}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin-bottom:24px}}
+.stat{{background:linear-gradient(135deg,rgba(30,30,45,.7),rgba(20,20,30,.8));border:1px solid rgba(255,0,60,.2);border-radius:10px;padding:20px;text-align:center;position:relative;overflow:hidden;transition:.3s}}
+.stat::before{{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ff0044,#ff6688)}}
+.stat:hover{{transform:translateY(-3px);border-color:rgba(255,0,60,.6);box-shadow:0 8px 30px rgba(255,0,60,.15)}}
+.ico{{font-size:1.6rem}}
+.val{{font-family:'Orbitron';font-size:1.7rem;font-weight:900;color:#ff3366;text-shadow:0 0 15px rgba(255,0,60,.3)}}
+.lab{{font-size:.7rem;color:#666;text-transform:uppercase;letter-spacing:2px;margin-top:4px}}
+.st{{font-family:'Orbitron';font-size:1rem;color:#fff;margin-bottom:14px;padding-left:12px;border-left:3px solid #ff0044;letter-spacing:2px}}
+.fg{{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:24px}}
+.fb{{background:rgba(20,20,30,.6);border:1px solid;border-radius:8px;padding:10px 14px;font-size:.85rem;backdrop-filter:blur(6px)}}
+.term{{background:#0d0d14;border:1px solid rgba(255,0,60,.3);border-radius:10px;overflow:hidden;margin-bottom:24px;box-shadow:0 0 30px rgba(255,0,60,.08)}}
+.th{{display:flex;gap:6px;padding:10px 14px;background:rgba(255,0,60,.07);border-bottom:1px solid rgba(255,0,60,.15)}}
+.td{{width:11px;height:11px;border-radius:50%}}.r{{background:#ff5f56}}.y{{background:#ffbd2e}}.g{{background:#27c93f}}
+.tt{{margin-left:8px;font-size:.75rem;color:#555}}
+.tb{{padding:18px;font-size:.82rem;line-height:1.8}}
+.ok{{color:#00ff88}}.wa{{color:#ffbd2e}}.co{{color:#ff0044}}.ou{{color:#888}}
+.foot{{text-align:center;padding:24px;color:#333;font-size:.7rem;letter-spacing:3px;border-top:1px solid rgba(255,0,60,.1)}}
+::-webkit-scrollbar{{width:6px}}::-webkit-scrollbar-track{{background:#0a0a0f}}::-webkit-scrollbar-thumb{{background:linear-gradient(#ff0044,#660022);border-radius:3px}}
+</style></head><body>
+<div class=wrap>
+<div class=hdr>
+<div class=logo>RED SELFBOT</div>
+<div class=sub>// V1 - PREMIUM CONTROL PANEL //</div>
+<div class=pulse><span class=dot></span>SYSTEM ONLINE</div>
+</div>
+<div class="card uc>
+<div class=av>{un[:1].upper()}</div>
+<div><div class=un>@{un}</div><div class=tag>Selfbot active \u2022 Python {platform.python_version()} \u2022 Prefix: {PREFIX}</div></div>
+</div>
+<div class=grid>
+<div class=stat><div class=ico>\u23f1</div><div class=val id=up>{uptime_s}</div><div class=lab>Uptime</div></div>
+<div class=stat><div class=ico>\u265c</div><div class=val>{g}</div><div class=lab>Servers</div></div>
+<div class=stat><div class=ico>\u26a1</div><div class=val>{p}ms</div><div class=lab>Latency</div></div>
+<div class=stat><div class=ico>\ud83e\udd16</div><div class=val>{len(selfbots)+1}</div><div class=lab>Accounts</div></div>
+<div class=stat><div class=ico>\ud83d\udcca</div><div class=val>{c}</div><div class=lab>Commands</div></div>
+<div class=stat><div class=ico>\ud83d\udc65</div><div class=val>{u}</div><div class=lab>Users</div></div>
+</div>
+<div class=st>MODULES</div><div class=fg>{fhtml}</div>
+<div class=st>SYSTEM LOG</div>
+<div class=term><div class=th><div class="td r"></div><div class="td y"></div><div class="td g"></div><span class=tt>red@selfbot ~ /session</span></div>
+<div class=tb>
+<span class=co>[root@red-selfbot]</span> <span class=ok>$ boot --kernel</span><br>
+<span class=ok>[OK]</span> <span class=ou>Patches applied.</span><br>
+<span class=ok>[OK]</span> <span class=ou>Gateway connected.</span><br>
+<span class=ok>[OK]</span> <span class=ou>Dashboard on 0.0.0.0:{port}</span><br>
+<span class=ok>[OK]</span> <span class=ou>All modules loaded.</span><br>
+<span class=wa>[WARN]</span> <span class=ou>Selfbots violate Discord TOS. Use at own risk.</span><br>
+<span class=co>[root@red-selfbot]</span> <span class=ok>$ status --live</span> <span class=ok>\u25cf Running</span>
+</div></div>
+<div class=foot>RED SELFBOT V1 \u2022 by RedGlitchX \u2022 Premium build</div>
+</div>
+<script>const sa={int(time.time())};function t(){{const s=Math.floor(Date.now()/1e3)-sa;const d=Math.floor(s/86400);const h=Math.floor(s%86400/3600);const m=Math.floor(s%3600/60);const x=s%60;const e=document.getElementById('up');if(e)e.textContent=d+'d '+h+'h '+m+'m '+x+'s'}}setInterval(t,1000);t();</script>
+</body></html>"""
+
+class Handler(BaseHTTPRequestHandler):
+    def _h(self, s=200, ct="text/html"):
+        self.send_response(s); self.send_header("Content-type", ct); self.send_header("Cache-Control","no-cache"); self.end_headers()
     def do_GET(self):
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.end_headers()
-        html = """
-        <!DOCTYPE html>
-        <html>
-        <head><title>System Status</title></head>
-        <body style="background-color: #0b0b0b; color: #00ffcc; font-family: monospace;">
-            <h2>[SYSTEM ACTIVE] Selfbot Online</h2>
-            <p>Status: Operational // Node Connected</p>
-        </body>
-        </html>
-        """
-        self.wfile.write(html.encode("utf-8"))
-    def log_message(self, format, *args):
-        pass
+        p = urlparse(self.path).path
+        if p == "/api/status":
+            self._h(200, "application/json");
+            self.wfile.write(json.dumps({"status":"online","uptime":int(time.time()-START_TIME),"prefix":PREFIX,"ts":int(time.time())}).encode())
+            return
+        if p == "/health":
+            self._h(200,"text/plain"); self.wfile.write(b"OK"); return
+        self._h(200,"text/html")
+        md = bot_meta.get("main", {})
+        md.setdefault("start", START_TIME)
+        md.setdefault("cmds", sum(COMMAND_USAGE.values()))
+        self.wfile.write(dashboard_html(md).encode())
+    def log_message(self, *a): pass
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
-    server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
-    server.serve_forever()
+    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
-# --- ⚙️ CONFIGURATION ---
-PREFIX = "$"
-
-# Create folder structure
-for f in ["music", "profiles", "clones", "archives", "logs"]:
-    if not os.path.exists(f): os.makedirs(f)
-
-selfbots = {} 
-
-def setup_bot(b):
-    log_chat_active = False
-    log_dm_active = False
-    anti_kick = False
-    anti_ban = False
-    tracked_users = set()
-    snipe_data = {}
-    spamming = False
+# ============================================================
+# SETUP
+# ============================================================
+def setup_bot(b, label="main"):
+    state = {
+        "spamming": False, "spam_channels": set(), "spam_scope": None,
+        "autoreact": False, "autoreact_emoji": None,
+        "anti_kick": False, "anti_ban": False,
+        "logchat_chans": set(), "logdm": False,
+        "tracked": set(),
+        "snipe": {}, "editsnipe": {},
+        "start_lang": "default",
+    }
 
     @b.event
-    async def on_message(message):
-        if message.guild and message.author != b.user:
-            snipe_data[message.channel.id] = f"[{message.author}] {message.content}"
+    async def on_ready():
+        print(f"\n[+] Logged in as {b.user} | Servers: {len(b.guilds)} | Prefix: {PREFIX}")
+        if label == "main":
+            users = sum(g.member_count or 0 for g in b.guilds)
+            bot_meta["main"] = {
+                "start": START_TIME, "name": str(b.user.name),
+                "guilds": len(b.guilds), "users": users,
+                "cmds": 0, "ping": round(b.latency*1000), "feats": state,
+            }
 
-        if log_chat_active and message.guild and message.author != b.user:
-            with open(f"logs/chat_{message.channel.id}.txt", "a", encoding="utf-8") as f:
-                f.write(f"[{message.created_at}] {message.author}: {message.content}\n")
+    @b.event
+    async def on_command_error(ctx, error):
+        if isinstance(error, commands.CommandNotFound): return
+        if isinstance(error, commands.MissingRequiredArgument):
+            return await safe_send(ctx, f"Missing argument. See $help.", delete_after=6)
+        if isinstance(error, commands.BadArgument):
+            return await safe_send(ctx, f"Bad argument.", delete_after=6)
+        if isinstance(error, commands.CommandInvokeError):
+            o = error.original
+            if isinstance(o, discord.Forbidden): return await safe_send(ctx, "No permission.", delete_after=5)
+            if isinstance(o, discord.HTTPException) and getattr(o,"code",None)==429: return
+        try: traceback.print_exception(type(error), error, error.__traceback__)
+        except: pass
 
-        if log_dm_active and not message.guild and message.author != b.user:
-            with open(f"logs/dm_{message.author.id}.txt", "a", encoding="utf-8") as f:
-                f.write(f"[{message.created_at}] {message.author}: {message.content}\n")
+    # Register all module commands
+    cmds.help.register(b, state)
+    cmds.text.register(b, state)
+    cmds.fun.register(b, state)
+    cmds.util.register(b, state)
+    cmds.info.register(b, state)
+    cmds.music.register(b, state)
+    cmds.spam.register(b, state)
+    cmds.profiles.register(b, state)
+    cmds.cloner.register(b, state)
+    cmds.archives.register(b, state)
+    cmds.protect.register(b, state)
+    cmds.logger.register(b, state)
+    cmds.status.register(b, state)
+    cmds.ai.register(b, state)
 
-        await b.process_commands(message)
+    # Multi-account callbacks
+    async def add_bot(token, name):
+        nb = commands.Bot(command_prefix=PREFIX, self_bot=True, intents=intents)
+        setup_bot(nb, label=name)
+        selfbots[name] = nb
+        def run_it():
+            loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
+            try: loop.run_until_complete(nb.start(token))
+            except Exception as e: print(f"[!] {name}: {e}")
+        threading.Thread(target=run_it, daemon=True).start()
 
-    @b.command()
-    async def REDHELP(ctx):
-        await ctx.message.delete()
-        menu = """```text
---- 📋 ・ COMPLETE COMMAND LIST ---
+    async def remove_bot(name):
+        if name in selfbots:
+            try: await selfbots[name].close()
+            except: pass
+            del selfbots[name]; return True
+        return False
 
-🎵 ・ MUSIC & VOICE:
-$helpvc        - Quick voice menu
-$downloadm     - Download from YouTube/URL [link]
-$adfiles       - Attach an MP3 for upload
-$dwnlibs       - View saved track list
-$plays [nr]    - Play track number X
-$stops         - Stop music and leave channel
+    cmds.multi.register(b, state, add_bot=add_bot, remove_bot=remove_bot, get_selfbots=lambda: selfbots)
 
-✉️ ・ SPAM BOT:
-$start @user   - Start spam from botjura.txt
-$stop          - Stop spam process
-$spam [m][n][d] - Repeat text X times with delay
+    return state
 
-👤 ・ PROFILE ARCHIVER:
-$prfdwn @user  - Download profile into /profiles
-$prflist       - List saved profiles (1, 2, 3...)
-$prfup [nr]    - Apply/load profile by number
-$mphelp        - Profiler help menu
-
-🏰 ・ CLONER MODULE ($DSRV):
-$dsrv          - Copy server structure
-$lsrv          - List local saved schemes
-$psrv [nr]     - Apply scheme to new server
-
-📂 ・ COPY & ARCHIVE:
-$clchat [nr]   - Copy last messages + Media
-$clist         - Display clip list
-$pstchat [nr]  - Paste chat from file X
-
-🛡️ ・ PROTECTION MODULE ($BP2HELP):
-$anti-kick     - Kick protection (on/off)
-$anti-ban      - Ban protection (on/off)
-$ghostping     - Discreet ping @user
-$tokencheck    - Check token validity
-
-📜 ・ LOGGER MODULE ($LHELP):
-$logchat       - Log channel messages
-$logdm         - Save direct messages
-$sniped        - View last deleted message
-$track @user   - User status notifications
-
-✨ ・ STATUS & UTILS:
-$stats [text]  - Set custom status
-$live [text]   - Set purple streaming status
-$remstats      - Clear current status
-
-🤖 ・ MULTI-ACC:
-$selfbot [t][n]- Add new token
-$selfbot       - List active accounts
-$selfbotr [name]- Remove account from list
-
-⚙️ ・ ADMIN:
-$REDHELP        - Complete menu (visible 30s)
-
-------------------------------------------
-Credits: RedGlitchX / redglitchx. / XTASK 
-          xs7david /   @193.7    / NTASK
-------------------------------------------
-```"""
-        await ctx.send(menu, delete_after=30)
-
-    @b.command()
-    async def helpvc(ctx):
-        await ctx.message.delete()
-        help_text = """```text
---- 🎵 VOICE HELP ---
-$plays [nr/name] - Play track
-$stops           - Stop music
-$downloadm [url] - Download MP3
-$dwnlibs         - Track list
-$adfiles         - Upload MP3 (attachment)
-```"""
-        await ctx.send(help_text, delete_after=15)
-
-    @b.command()
-    async def plays(ctx, *, name: str):
-        await ctx.message.delete()
-        if not ctx.author.voice: return await ctx.send("❌ Join a voice channel first!", delete_after=5)
-        files = sorted(os.listdir("music"))
-        path = None
-        if name.isdigit():
-            idx = int(name) - 1
-            if 0 <= idx < len(files): path = f"music/{files[idx]}"
-        else:
-            for f in files:
-                if name.lower() in f.lower():
-                    path = f"music/{f}"
-                    break
-        if not path or not os.path.exists(path): return await ctx.send(f"❌ Track `{name}` not found!", delete_after=5)
+async def meta_updater(b):
+    await b.wait_until_ready()
+    while not b.is_closed():
         try:
-            vc = ctx.voice_client or await ctx.author.voice.channel.connect()
-            if vc.is_playing(): vc.stop()
-            vc.play(discord.FFmpegPCMAudio(path))
-            await ctx.send(f"🎶 Playing: `{os.path.basename(path)}`", delete_after=10)
-        except Exception as e: await ctx.send(f"❌ Voice Error: {e}", delete_after=10)
+            md = bot_meta.get("main", {})
+            md["guilds"] = len(b.guilds)
+            md["users"] = sum(g.member_count or 0 for g in b.guilds)
+            md["ping"] = round(b.latency*1000)
+            md["cmds"] = sum(COMMAND_USAGE.values())
+            bot_meta["main"] = md
+        except: pass
+        await asyncio.sleep(10)
 
-    @b.command()
-    async def stops(ctx):
-        await ctx.message.delete()
-        if ctx.voice_client: await ctx.voice_client.disconnect()
-
-    @b.command()
-    async def downloadm(ctx, link: str):
-        await ctx.message.delete()
-        try:
-            fname = f"music/dwn_{datetime.datetime.now().strftime('%H%M%S')}.mp3"
-            r = requests.get(link, stream=True, timeout=15)
-            with open(fname, 'wb') as f:
-                for chunk in r.iter_content(1024): f.write(chunk)
-            await ctx.send(f"✅ Downloaded: `{fname}`", delete_after=10)
-        except: await ctx.send("❌ Download failed!", delete_after=5)
-
-    @b.command()
-    async def adfiles(ctx):
-        await ctx.message.delete()
-        if not ctx.message.attachments:
-            return await ctx.send("❌ Attach an MP3 file!", delete_after=5)
-        for attachment in ctx.message.attachments:
-            if attachment.filename.endswith(".mp3"):
-                await attachment.save(f"music/{attachment.filename}")
-                await ctx.send(f"✅ Saved: `{attachment.filename}`", delete_after=5)
-            else:
-                await ctx.send(f"❌ `{attachment.filename}` is not an MP3!", delete_after=5)
-
-    @b.command()
-    async def dwnlibs(ctx):
-        await ctx.message.delete()
-        files = sorted(os.listdir("music"))
-        lista = "\n".join([f"{i+1}. {f}" for i, f in enumerate(files)]) if files else "No files."
-        await ctx.send(f"🎵 **Library:**\n```\n{lista}\n```", delete_after=20)
-
-    @b.command()
-    async def start(ctx, user: discord.Member = None):
-        nonlocal spamming
-        await ctx.message.delete()
-        spamming = True
-        if not os.path.exists("botjura.txt"):
-            with open("botjura.txt", "w", encoding="utf-8") as f:
-                f.write("RED-SELFBOT ON TOP\n")
-        with open("botjura.txt", "r", encoding="utf-8") as f:
-            lines = [l.strip() for l in f.readlines() if l.strip()]
-        while spamming:
-            for l in lines:
-                if not spamming: break
-                await ctx.send(f"{user.mention if user else ''} {l}")
-                await asyncio.sleep(0.8)
-
-    @b.command()
-    async def stop(ctx):
-        nonlocal spamming
-        spamming = False
-        await ctx.message.delete()
-        await ctx.send("🛑 Spam stopped.", delete_after=3)
-
-    @b.command()
-    async def spam(ctx, msg: str, count: int, delay: float = 0.5):
-        await ctx.message.delete()
-        for _ in range(count):
-            await ctx.send(msg)
-            await asyncio.sleep(delay)
-
-    @b.command()
-    async def prfdwn(ctx, user: discord.Member):
-        await ctx.message.delete()
-        if not os.path.exists("profiles"): os.makedirs("profiles")
-        avatar_url = str(user.avatar.url) if user.avatar else ""
-        created_at = str(user.created_at) if user.created_at else ""
-        joined_at = str(user.joined_at) if hasattr(user, 'joined_at') and user.joined_at else ""
-        roles = [r.name for r in user.roles] if hasattr(user, 'roles') else []
-        data = {
-            "name": user.name,
-            "id": user.id,
-            "avatar": avatar_url,
-            "created_at": created_at,
-            "joined_at": joined_at,
-            "roles": roles
-        }
-        with open(f"profiles/{user.id}.json", "w", encoding="utf-8") as f: json.dump(data, f, indent=4)
-        await ctx.send(f"👤 Profile archived: `{user.name}`", delete_after=5)
-
-    @b.command()
-    async def prflist(ctx):
-        await ctx.message.delete()
-        if not os.path.exists("profiles"): os.makedirs("profiles")
-        files = sorted([f for f in os.listdir("profiles") if f.endswith(".json")])
-        if not files:
-            return await ctx.send("👤 No saved profiles found.", delete_after=10)
-        
-        msg = "👤 **SAVED PROFILES:**\n```text\n"
-        for i, f in enumerate(files, 1):
-            try:
-                with open(f"profiles/{f}", "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    p_name = data.get("name", "Unknown")
-                    msg += f"{i} {p_name}\n"
-            except:
-                msg += f"{i} Read error: {f}\n"
-        msg += "```\n*Use `$prfup [nr]` to load/view.*"
-        await ctx.send(msg, delete_after=30)
-
-    @b.command()
-    async def prfup(ctx, nr: int):
-        await ctx.message.delete()
-        if not os.path.exists("profiles"): return await ctx.send("❌ Profiles folder does not exist.", delete_after=5)
-        files = sorted([f for f in os.listdir("profiles") if f.endswith(".json")])
-        if not (1 <= nr <= len(files)):
-            return await ctx.send(f"❌ Invalid number! Choose between 1 and {len(files)}.", delete_after=5)
-        
-        path = f"profiles/{files[nr-1]}"
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        info = (
-            f"👤 **Profile Info ({nr}):**\n"
-            f"• Name: `{data.get('name')}`\n"
-            f"• ID: `{data.get('id')}`\n"
-            f"• Created: `{data.get('created_at')}`\n"
-            f"• Roles Count: `{len(data.get('roles', []))}`"
-        )
-        await ctx.send(info, delete_after=20)
-
-    @b.command()
-    async def mphelp(ctx):
-        await ctx.message.delete()
-        await ctx.send("```Profile Archiver:\n$prfdwn @user - Save profile\n$prflist - List profiles (1 Name)\n$prfup [nr] - Load profile info```", delete_after=15)
-
-    @b.command()
-    async def dsrv(ctx):
-        await ctx.message.delete()
-        data = {
-            "name": ctx.guild.name,
-            "roles": [],
-            "categories": [],
-            "orphan_channels": []
-        }
-        
-        for role in reversed(ctx.guild.roles):
-            if not role.managed:
-                data["roles"].append({
-                    "id": role.id,
-                    "n": role.name,
-                    "c": role.color.value,
-                    "p": role.permissions.value,
-                    "h": role.hoist,
-                    "m": role.mentionable,
-                    "is_everyone": role.is_default()
-                })
-
-        def get_overwrites(channel):
-            overwrites = []
-            for target, overwrite in channel.overwrites.items():
-                allow, deny = overwrite.pair()
-                overwrites.append({
-                    "id": target.id,
-                    "type": "role" if isinstance(target, discord.Role) else "member",
-                    "allow": allow.value,
-                    "deny": deny.value
-                })
-            return overwrites
-
-        for cat in ctx.guild.categories:
-            chans = []
-            for ch in cat.channels:
-                ch_data = {
-                    "n": ch.name, 
-                    "t": str(ch.type),
-                    "overwrites": get_overwrites(ch)
-                }
-                if isinstance(ch, discord.TextChannel):
-                    ch_data["topic"] = ch.topic
-                    ch_data["nsfw"] = ch.nsfw
-                elif isinstance(ch, discord.VoiceChannel):
-                    ch_data["bitrate"] = ch.bitrate
-                    ch_data["user_limit"] = ch.user_limit
-                chans.append(ch_data)
-            
-            data["categories"].append({
-                "n": cat.name, 
-                "overwrites": get_overwrites(cat),
-                "ch": chans
-            })
-
-        for ch in ctx.guild.channels:
-            if ch.category is None:
-                ch_data = {
-                    "n": ch.name, 
-                    "t": str(ch.type),
-                    "overwrites": get_overwrites(ch)
-                }
-                if isinstance(ch, discord.TextChannel):
-                    ch_data["topic"] = ch.topic
-                    ch_data["nsfw"] = ch.nsfw
-                elif isinstance(ch, discord.VoiceChannel):
-                    ch_data["bitrate"] = ch.bitrate
-                    ch_data["user_limit"] = ch.user_limit
-                data["orphan_channels"].append(ch_data)
-
-        filename = f"clones/backup_{ctx.guild.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filename, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
-        
-        await ctx.send(f"🏰 Backup saved for **{ctx.guild.name}**!", delete_after=5)
-
-    @b.command()
-    async def lsrv(ctx):
-        await ctx.message.delete()
-        if not os.path.exists("clones"): os.makedirs("clones")
-        files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        
-        if not files:
-            return await ctx.send("🏰 No saved backups.", delete_after=10)
-        
-        msg = "🏰 **SAVED BACKUPS LIST:**\n```text\n"
-        for i, f in enumerate(files, 1):
-            try:
-                with open(f"clones/{f}", "r", encoding="utf-8") as file:
-                    data = json.load(file)
-                    s_name = data.get("name", "Unknown")
-                    msg += f"{i}. {s_name} ({f})\n"
-            except:
-                msg += f"{i}. Read error: {f}\n"
-        msg += "```\n*Use `$psrv [nr]` to apply.*"
-        await ctx.send(msg, delete_after=30)
-
-    @b.command()
-    async def psrv(ctx, nr: int):
-        await ctx.message.delete()
-        if not os.path.exists("clones"): return await ctx.send("❌ Clones folder does not exist.", delete_after=5)
-        files = sorted([f for f in os.listdir("clones") if f.endswith(".json")])
-        
-        if not (1 <= nr <= len(files)):
-            return await ctx.send(f"❌ Invalid number! Choose between 1 and {len(files)}.", delete_after=5)
-        
-        path = f"clones/{files[nr-1]}"
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        
-        await ctx.send(f"🏰 Applying backup: **{data['name']}**... (Please wait)", delete_after=10)
-
-        role_mapping = {}
-        everyone_role = ctx.guild.default_role
-        
-        for r in data.get("roles", []):
-            if r.get("is_everyone"):
-                role_mapping[r["id"]] = everyone_role
-                try: await everyone_role.edit(permissions=discord.Permissions(r["p"]))
-                except: pass
-                continue
-                
-            try:
-                new_role = await ctx.guild.create_role(
-                    name=r["n"],
-                    color=discord.Color(r["c"]),
-                    permissions=discord.Permissions(r["p"]),
-                    hoist=r["h"],
-                    mentionable=r["m"]
-                )
-                role_mapping[r["id"]] = new_role
-            except: pass
-
-        def sync_overwrites(ow_data):
-            overwrites = {}
-            for ow in ow_data:
-                target = role_mapping.get(ow["id"])
-                if target:
-                    overwrites[target] = discord.PermissionOverwrite.from_pair(
-                        discord.Permissions(ow["allow"]),
-                        discord.Permissions(ow["deny"])
-                    )
-            return overwrites
-
-        for cat_data in data.get("categories", []):
-            try:
-                ow = sync_overwrites(cat_data.get("overwrites", []))
-                category = await ctx.guild.create_category(cat_data["n"], overwrites=ow)
-                for ch in cat_data["ch"]:
-                    ch_ow = sync_overwrites(ch.get("overwrites", []))
-                    if ch["t"] == "text":
-                        await category.create_text_channel(
-                            ch["n"], 
-                            topic=ch.get("topic"), 
-                            nsfw=ch.get("nsfw", False),
-                            overwrites=ch_ow
-                        )
-                    elif ch["t"] == "voice":
-                        await category.create_voice_channel(
-                            ch["n"],
-                            bitrate=ch.get("bitrate", 64000),
-                            user_limit=ch.get("user_limit", 0),
-                            overwrites=ch_ow
-                        )
-            except: pass
-
-        for ch in data.get("orphan_channels", []):
-            try:
-                ch_ow = sync_overwrites(ch.get("overwrites", []))
-                if ch["t"] == "text":
-                    await ctx.guild.create_text_channel(
-                        ch["n"], 
-                        topic=ch.get("topic"), 
-                        nsfw=ch.get("nsfw", False),
-                        overwrites=ch_ow
-                    )
-                elif ch["t"] == "voice":
-                    await ctx.guild.create_voice_channel(
-                        ch["n"],
-                        bitrate=ch.get("bitrate", 64000),
-                        user_limit=ch.get("user_limit", 0),
-                        overwrites=ch_ow
-                    )
-            except: pass
-
-        await ctx.send("✅ Backup applied successfully!", delete_after=5)
-
-    @b.command()
-    async def clchat(ctx, amount: int = 100):
-        await ctx.message.delete()
-        fname = f"archives/chat_{ctx.channel.id}.txt"
-        with open(fname, "w", encoding="utf-8") as f:
-            async for m in ctx.channel.history(limit=amount):
-                f.write(f"[{m.created_at}] {m.author}: {m.content}\n")
-        await ctx.send(f"📂 Chat saved to `{fname}`", delete_after=10)
-
-    @b.command()
-    async def clist(ctx):
-        await ctx.message.delete()
-        files = os.listdir("archives")
-        await ctx.send(f"📂 **Archives:** `{files}`", delete_after=15)
-
-    @b.command()
-    async def pstchat(ctx, channel_id: str):
-        await ctx.message.delete()
-        path = f"archives/chat_{channel_id}.txt"
-        if not os.path.exists(path): return await ctx.send("❌ Archive not found!", delete_after=5)
-        with open(path, "r", encoding="utf-8") as f:
-            lines = f.readlines()
-        for line in lines[-10:]:
-            await ctx.send(line.strip())
-            await asyncio.sleep(0.5)
-
-    @b.command(name="anti-kick")
-    async def anti_kick_cmd(ctx):
-        nonlocal anti_kick
-        await ctx.message.delete()
-        anti_kick = not anti_kick
-        status = "ENABLED" if anti_kick else "DISABLED"
-        await ctx.send(f"🛡️ Anti-Kick: **{status}**", delete_after=5)
-
-    @b.command(name="anti-ban")
-    async def anti_ban_cmd(ctx):
-        nonlocal anti_ban
-        await ctx.message.delete()
-        anti_ban = not anti_ban
-        status = "ENABLED" if anti_ban else "DISABLED"
-        await ctx.send(f"🛡️ Anti-Ban: **{status}**", delete_after=5)
-
-    @b.command()
-    async def ghostping(ctx, user: discord.Member):
-        await ctx.message.delete()
-        m = await ctx.send(user.mention)
-        await m.delete()
-
-    @b.command()
-    async def tokencheck(ctx, token: str):
-        await ctx.message.delete()
-        r = requests.get("https://discord.com/api/v9/users/@me", headers={"Authorization": token})
-        res = "✅ Valid" if r.status_code == 200 else "❌ Invalid"
-        await ctx.send(f"🎫 Token Status: {res}", delete_after=10)
-
-    @b.command()
-    async def logchat(ctx):
-        nonlocal log_chat_active
-        await ctx.message.delete()
-        log_chat_active = not log_chat_active
-        status = "ENABLED" if log_chat_active else "DISABLED"
-        await ctx.send(f"📜 Chat Logger: **{status}**", delete_after=5)
-
-    @b.command()
-    async def logdm(ctx):
-        nonlocal log_dm_active
-        await ctx.message.delete()
-        log_dm_active = not log_dm_active
-        status = "ENABLED" if log_dm_active else "DISABLED"
-        await ctx.send(f"📜 DM Logger: **{status}**", delete_after=5)
-
-    @b.command()
-    async def sniped(ctx):
-        await ctx.message.delete()
-        data = snipe_data.get(ctx.channel.id)
-        if data: await ctx.send(data, delete_after=15)
-        else: await ctx.send("❌ Nothing to recover.", delete_after=5)
-
-    @b.command()
-    async def track(ctx, user: discord.Member):
-        nonlocal tracked_users
-        await ctx.message.delete()
-        if user.id in tracked_users:
-            tracked_users.remove(user.id)
-            await ctx.send(f"👁️ Stopped tracking: `{user.name}`", delete_after=5)
-        else:
-            tracked_users.add(user.id)
-            await ctx.send(f"👁️ Now tracking: `{user.name}`", delete_after=5)
-
-    @b.command()
-    async def stats(ctx, *, text: str):
-        await ctx.message.delete()
-        activity = discord.Game(name=text)
-        await b.change_presence(activity=activity)
-        await ctx.send(f"✨ Status updated: `{text}`", delete_after=5)
-
-    @b.command()
-    async def live(ctx, *, text: str):
-        await ctx.message.delete()
-        activity = discord.Streaming(name=text, url="https://twitch.tv/twitch")
-        await b.change_presence(activity=activity)
-        await ctx.send(f"🟣 Streaming status set: `{text}`", delete_after=5)
-
-    @b.command()
-    async def remstats(ctx):
-        await ctx.message.delete()
-        await b.change_presence(activity=None)
-        await ctx.send("✨ Status cleared.", delete_after=5)
-
-    @b.command()
-    async def selfbot(ctx, token_nou: str = None, nume: str = None):
-        await ctx.message.delete()
-        if not token_nou:
-            if not selfbots:
-                return await ctx.send("🤖 No other active selfbots in list.", delete_after=5)
-            msg = "🤖 **Active Accounts:**\n```text\n"
-            for k in selfbots.keys():
-                msg += f"- {k}\n"
-            msg += "```"
-            return await ctx.send(msg, delete_after=15)
-        
-        nume_bot = nume or f"Bot_{len(selfbots)+1}"
-        if nume_bot in selfbots:
-            return await ctx.send(f"❌ Account `{nume_bot}` already exists!", delete_after=5)
-
-        new_bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
-        setup_bot(new_bot)
-        selfbots[nume_bot] = new_bot
-
-        async def run_new():
-            try:
-                await new_bot.start(token_nou)
-            except Exception as e:
-                print(f"Selfbot error {nume_bot}: {e}")
-
-        threading.Thread(target=lambda: asyncio.run(run_new()), daemon=True).start()
-        await ctx.send(f"✅ Added and started account: `{nume_bot}`", delete_shell=True)
-
-    @b.command()
-    async def selfbotr(ctx, nume: str):
-        await ctx.message.delete()
-        if nume in selfbots:
-            bot_instance = selfbots[nume]
-            await bot_instance.close()
-            del selfbots[nume]
-            await ctx.send(f"🗑️ Account `{nume}` removed from list.", delete_after=5)
-        else:
-            await ctx.send(f"❌ Account `{nume}` not found.", delete_after=5)
+intents = discord.Intents.all()
+intents.typing = False
 
 async def main():
-    # Start background HTTP server for Render (port & HTML check)
     threading.Thread(target=run_server, daemon=True).start()
-
     token = os.environ.get("DISCORD_TOKEN")
+    if not token and os.path.exists("token.txt"):
+        with open("token.txt") as f: token = f.read().strip()
     if not token:
-        print("❌ Error: DISCORD_TOKEN environment variable is missing!")
-        return
-    
+        print("[!] DISCORD_TOKEN not set. Set env or create token.txt.")
+        print(f"[i] Dashboard still on port {os.environ.get('PORT','10000')}")
+        while True: await asyncio.sleep(3600)
     token = token.strip().strip('"').strip("'")
-    bot = commands.Bot(command_prefix=PREFIX, self_bot=True)
+    bot = commands.Bot(command_prefix=PREFIX, self_bot=True, intents=intents, guild_subscriptions=True)
     setup_bot(bot)
-    
     async with bot:
+        bot.loop.create_task(meta_updater(bot))
         await bot.start(token)
 
 if __name__ == "__main__":
+    print("\n" + "="*50)
+    print("RED SELFBOT V1 - Starting")
+    print("="*50)
     try:
         asyncio.run(main())
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
         loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        print("\n[-] Shutting down.")
