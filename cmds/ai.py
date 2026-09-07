@@ -145,7 +145,7 @@ def register(b, state):
         await safe_send(ctx, code_block("\n".join(lines)), delete_after=25)
 
     # ---- REMOVE AI CONFIG ----
-    @b.command(name="air", aliases=["airemove", "airm", "aidel", "aidel"])
+    @b.command(name="air", aliases=["airemove", "airm", "aidel"])
     async def _air(ctx, nr: int = None):
         track_cmd("air")
         await del_msg(ctx.message)
@@ -186,7 +186,10 @@ def register(b, state):
         # Show the user line first
         q_display = question if len(question) < 1500 else question[:1497] + "..."
         header = f"[You] » {q_display}\n[AI] ... thinking"
-        thinking = await safe_send(ctx, code_block(header), delete_after=60)
+        # No delete_after here: this same message is reused to display the
+        # answer (edit below) or is deleted explicitly in the file branch.
+        # An auto-delete timer would remove the finished response instead.
+        thinking = await safe_send(ctx, code_block(header))
 
         try:
             response = await asyncio.wait_for(

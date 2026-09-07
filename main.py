@@ -116,7 +116,7 @@ body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient
 <div class=sub>// V1 - PREMIUM CONTROL PANEL //</div>
 <div class=pulse><span class=dot></span>SYSTEM ONLINE</div>
 </div>
-<div class="card uc>
+<div class="card uc">
 <div class=av>{un[:1].upper()}</div>
 <div><div class=un>@{un}</div><div class=tag>Selfbot active \u2022 Python {platform.python_version()} \u2022 Prefix: {PREFIX}</div></div>
 </div>
@@ -124,9 +124,9 @@ body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient
 <div class=stat><div class=ico>\u23f1</div><div class=val id=up>{uptime_s}</div><div class=lab>Uptime</div></div>
 <div class=stat><div class=ico>\u265c</div><div class=val>{g}</div><div class=lab>Servers</div></div>
 <div class=stat><div class=ico>\u26a1</div><div class=val>{p}ms</div><div class=lab>Latency</div></div>
-<div class=stat><div class=ico>\ud83e\udd16</div><div class=val>{len(selfbots)+1}</div><div class=lab>Accounts</div></div>
-<div class=stat><div class=ico>\ud83d\udcca</div><div class=val>{c}</div><div class=lab>Commands</div></div>
-<div class=stat><div class=ico>\ud83d\udc65</div><div class=val>{u}</div><div class=lab>Users</div></div>
+<div class=stat><div class=ico>\U0001F916</div><div class=val>{len(selfbots)+1}</div><div class=lab>Accounts</div></div>
+<div class=stat><div class=ico>\U0001F4CA</div><div class=val>{c}</div><div class=lab>Commands</div></div>
+<div class=stat><div class=ico>\U0001F465</div><div class=val>{u}</div><div class=lab>Users</div></div>
 </div>
 <div class=st>MODULES</div><div class=fg>{fhtml}</div>
 <div class=st>SYSTEM LOG</div>
@@ -146,26 +146,68 @@ body::before{{content:'';position:fixed;inset:0;background-image:linear-gradient
 </body></html>"""
 
 class Handler(BaseHTTPRequestHandler):
-    def _h(self, s=200, ct="text/html"):
-        self.send_response(s); self.send_header("Content-type", ct); self.send_header("Cache-Control","no-cache"); self.end_headers()
+    server_version = "RedSelfbot/1"
+
+    def _reply(self, status, body, ct="text/html; charset=utf-8"):
+        """Encode the body BEFORE sending headers.
+
+        The old code sent `200 OK` and only then encoded, so any rendering
+        failure (it used to be a UnicodeEncodeError from surrogate-pair escapes)
+        aborted mid-response and the browser received a blank 200 page with the
+        traceback only in the server log.
+        """
+        if isinstance(body, str):
+            body = body.encode("utf-8", errors="replace")
+        self.send_response(status)
+        self.send_header("Content-type", ct)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except Exception:
+            pass  # client went away
+
     def do_GET(self):
         p = urlparse(self.path).path
-        if p == "/api/status":
-            self._h(200, "application/json");
-            self.wfile.write(json.dumps({"status":"online","uptime":int(time.time()-START_TIME),"prefix":PREFIX,"ts":int(time.time())}).encode())
-            return
-        if p == "/health":
-            self._h(200,"text/plain"); self.wfile.write(b"OK"); return
-        self._h(200,"text/html")
-        md = bot_meta.get("main", {})
-        md.setdefault("start", START_TIME)
-        md.setdefault("cmds", sum(COMMAND_USAGE.values()))
-        self.wfile.write(dashboard_html(md).encode())
+        try:
+            if p == "/api/status":
+                return self._reply(200, json.dumps({
+                    "status": "online",
+                    "uptime": int(time.time() - START_TIME),
+                    "prefix": PREFIX,
+                    "ts": int(time.time()),
+                }), "application/json")
+            if p == "/health":
+                return self._reply(200, "OK", "text/plain; charset=utf-8")
+            md = bot_meta.get("main", {})
+            md.setdefault("start", START_TIME)
+            md.setdefault("cmds", sum(COMMAND_USAGE.values()))
+            return self._reply(200, dashboard_html(md))
+        except Exception as e:
+            traceback.print_exc()
+            return self._reply(500, f"Dashboard render error: {type(e).__name__}: {e}",
+                               "text/plain; charset=utf-8")
+
     def log_message(self, *a): pass
 
 def run_server():
     port = int(os.environ.get("PORT", 10000))
-    HTTPServer(("0.0.0.0", port), Handler).serve_forever()
+    # SO_REUSEADDR keeps a restart from failing on a lingering TIME_WAIT socket.
+    HTTPServer.allow_reuse_address = True
+    try:
+        httpd = HTTPServer(("0.0.0.0", port), Handler)
+    except OSError as e:
+        # Used to die silently inside this daemon thread, leaving the bot
+        # running with no dashboard and no explanation.
+        print(f"[!] Dashboard could not bind 0.0.0.0:{port} ({e}).")
+        print(f"[!] Set a different port, e.g.  PORT=10001 python main.py")
+        return
+    print(f"[+] Dashboard listening on http://0.0.0.0:{port}")
+    try:
+        httpd.serve_forever()
+    except Exception as e:
+        print(f"[!] Dashboard stopped: {e}")
 
 # ============================================================
 # SETUP
@@ -224,7 +266,7 @@ def setup_bot(b, label="main"):
 
     # Multi-account callbacks
     async def add_bot(token, name):
-        nb = commands.Bot(command_prefix=PREFIX, self_bot=True, intents=intents)
+        nb = make_bot(PREFIX)
         setup_bot(nb, label=name)
         selfbots[name] = nb
         def run_it():
@@ -257,10 +299,8 @@ async def meta_updater(b):
         except: pass
         await asyncio.sleep(10)
 
-intents = discord.Intents.all()
-intents.typing = False
-
 async def main():
+    warn_if_wrong_library()
     threading.Thread(target=run_server, daemon=True).start()
     token = os.environ.get("DISCORD_TOKEN")
     if not token and os.path.exists("token.txt"):
@@ -270,20 +310,56 @@ async def main():
         print(f"[i] Dashboard still on port {os.environ.get('PORT','10000')}")
         while True: await asyncio.sleep(3600)
     token = token.strip().strip('"').strip("'")
-    bot = commands.Bot(command_prefix=PREFIX, self_bot=True, intents=intents, guild_subscriptions=True)
+    bot = make_bot(PREFIX)
     setup_bot(bot)
+    print(f"[+] {len(bot.commands)} commands registered.")
     async with bot:
         bot.loop.create_task(meta_updater(bot))
-        await bot.start(token)
+        try:
+            await bot.start(token)
+        except LOGIN_ERRORS as e:
+            print(f"\n[!] Could not connect: {type(e).__name__}: {e}")
+            if not SELF_BOT_CAPABLE:
+                print()
+                print(LIBRARY_WARNING.format(
+                    lib=discord_lib_name() or "discord.py",
+                    ver=getattr(discord, "__version__", "?"),
+                ))
+            elif type(e).__name__ == "PrivilegedIntentsRequired":
+                print("[!] Privileged intents were rejected - that happens with a BOT token.")
+                print("[!] A selfbot needs a USER token.")
+            else:
+                print("[!] The token is invalid or revoked - grab a fresh user token.")
+            raise SystemExit(1)
 
 if __name__ == "__main__":
     print("\n" + "="*50)
     print("RED SELFBOT V1 - Starting")
     print("="*50)
+
+    def _shutdown():
+        print("\n[-] Shutting down.")
+
     try:
         asyncio.run(main())
-    except RuntimeError:
-        loop = asyncio.new_event_loop(); asyncio.set_event_loop(loop)
-        loop.run_until_complete(main())
     except KeyboardInterrupt:
-        print("\n[-] Shutting down.")
+        _shutdown()
+    except RuntimeError as _exc:
+        # Only recover from "asyncio.run() cannot be called from a running event
+        # loop". Catching every RuntimeError here used to relaunch main() after a
+        # genuine failure, spawning a second dashboard thread (port clash) and a
+        # second gateway session for the same account.
+        if "cannot be called from a running event loop" not in str(_exc):
+            raise
+        print("[i] Already inside a running event loop - using a manual loop.")
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(main())
+        except KeyboardInterrupt:
+            _shutdown()
+        finally:
+            try:
+                loop.close()
+            except Exception:
+                pass

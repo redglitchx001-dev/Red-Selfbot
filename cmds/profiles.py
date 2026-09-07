@@ -15,6 +15,12 @@ def register(b, state):
             fetched = await b.fetch_user(t.id)
             if fetched.banner: banner = fetched.banner.url
         except: pass
+        # A single unexpected attribute shape used to abort the whole command
+        # (e.g. TypeError formatting a colour), so the colour is read defensively.
+        try:
+            colour_val = t.color.value if getattr(t, "color", None) else 0
+        except Exception:
+            colour_val = 0
         data = {
             "name": t.name, "display": getattr(t,"display_name",t.name),
             "nick": getattr(t,"nick",None), "id": t.id,
@@ -22,7 +28,7 @@ def register(b, state):
             "created": t.created_at.strftime("%Y-%m-%d %H:%M"),
             "joined": t.joined_at.strftime("%Y-%m-%d %H:%M") if hasattr(t,"joined_at") and t.joined_at else None,
             "roles": [r.name for r in getattr(t,"roles",[]) if not r.is_default()] if hasattr(t,"roles") else [],
-            "color": f"#{t.color.value:06x}" if hasattr(t,"color") else "#000000",
+            "color": f"#{colour_val:06x}",
         }
         save_json(f"profiles/{t.id}.json", data)
         await safe_send(ctx, f"Saved profile: {t.name}", delete_after=8)

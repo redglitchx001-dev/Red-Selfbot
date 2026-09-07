@@ -1,3 +1,13 @@
+# RED SELFBOT V1
+#
+# IMPORTANT: this is a SELFBOT and must run on discord.py-self, which keeps the
+# user-account gateway handshake. Stock discord.py >= 2.0 removed self-bot
+# support and always sends `Authorization: Bot <token>`, so a user token is
+# rejected with "Improper token has been passed".
+#
+# If you previously installed the wrong one:
+#   pip uninstall -y discord.py discord
+#   pip install -r requirements.txt
 discord.py-self>=2.0.0,<3.0.0
 requests>=2.31.0
 PyNaCl>=1.5.0

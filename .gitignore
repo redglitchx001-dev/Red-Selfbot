@@ -1,0 +1,31 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- Secrets: NEVER commit these ---
+# main.py reads the Discord user token from token.txt or $DISCORD_TOKEN
+token.txt
+tokens.txt
+.env
+# $aiadd stores endpoint + api_key here in plaintext
+data/ai_configs.json
+
+# --- Runtime storage (created automatically by utils/common.py on import) ---
+music/
+profiles/
+clones/
+archives/
+logs/
+
+# data/lines_*.txt and botjura.txt ARE shipped content and stay tracked.
+
+# --- OS / editor noise ---
+.DS_Store
+Thumbs.db
+*.swp
+*.log

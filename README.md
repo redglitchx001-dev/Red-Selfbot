@@ -22,6 +22,47 @@ python main.py
 
 The dashboard is served on the port in `$PORT` (default `10000`).
 
+On startup you should see:
+
+```
+RED SELFBOT V1 - Starting
+==================================================
+[i] discord library: discord.py-self 2.1.0 (self-bot capable)
+[+] Dashboard listening on http://0.0.0.0:10000
+[+] 166 commands registered.
+[+] Logged in as <you> | Servers: N | Prefix: $
+```
+
+## Troubleshooting
+
+**`CommandRegistrationError: The alias help is already an existing command or alias`**
+Fixed — `main.py` builds the client with `help_command=None`, which disables
+discord.py's built-in `help` command so `$REDHELP` can own the `help`/`h` aliases.
+
+**`AttributeError: module 'discord' has no attribute 'Intents'`**
+You installed `discord.py-self` (correct) but something still calls
+`discord.Intents`. Fixed — `utils.common.get_intents()` returns `None` on self
+forks and `make_bot()` only passes `intents` when the library supports it.
+
+**`LoginFailure: Improper token has been passed`**
+Stock `discord.py` 2.x is installed. It removed self-bot support and always
+authenticates as `Bot <token>`, so a user token can never work. The bot now
+detects this at startup and prints the fix:
+
+```bash
+pip uninstall -y discord.py discord
+pip install -U "discord.py-self>=2.0.0,<3.0.0"
+```
+
+**Dashboard did not open**
+`run_server()` now reports bind failures instead of dying silently in its
+daemon thread. Pick another port with `PORT=10001 python main.py`.
+
+## Security notes
+
+`token.txt` and `data/ai_configs.json` (which stores AI API keys in plaintext)
+are listed in `.gitignore`. Keep it that way — neither belongs in version control.
+
 ## Layout
 
 ```

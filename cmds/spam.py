@@ -98,8 +98,11 @@ def resolve_target_from_text(ctx, text):
         if mm:
             uname = mm.group(1)
             rest = mm.group(2).strip()
+            # Bind `low` before the guild branch: it is also used by the
+            # client-cache lookup below, which runs in DMs where ctx.guild is
+            # None. Previously this raised UnboundLocalError outside a server.
+            low = uname.lower()
             if ctx.guild:
-                low = uname.lower()
                 for mem in ctx.guild.members:
                     if mem.name.lower() == low or (mem.nick and mem.nick.lower() == low) or \
                        str(mem).lower().startswith(low):
@@ -159,11 +162,17 @@ def register(b, state):
         target = None
         filepath = None
         rest = args or ""
+        # Text remaining after any leading @name / <@id> / snowflake is parsed
+        # off. This MUST be initialised unconditionally: bare `$start` skips the
+        # whole parsing block below and used to die with
+        # UnboundLocalError: cannot access local variable 'rem'.
+        rem = rest
         # Resolve possible user at the start
         if rest:
-            maybe_t, after = await b.loop.run_in_executor(None, lambda: resolve_target_from_text(ctx, rest))
-            # can't do blocking fetch in executor cleanly; do it manually with the ctx:
-            # Re-do it async here for fetches
+            # NOTE: the old blocking `resolve_target_from_text()` call that ran
+            # in an executor here was removed - its result was thrown away and
+            # the async re-implementation below already does the same work
+            # (without stalling a thread-pool worker on a network fetch).
             import re as _re
             uid = None
             rem = rest

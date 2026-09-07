@@ -3,10 +3,169 @@
 import os, time, random, re, json, asyncio, datetime, platform, traceback
 import requests
 import discord
+from discord.ext import commands as _dpy_commands
 
 PREFIX = "$"
 START_TIME = time.time()
 COMMAND_USAGE = {}
+
+# Every cmds/* module does `from utils.common import *` and relies on these
+# names leaking through, so the contract is declared explicitly. Keeping it
+# spelled out also lets linters resolve the star import and catch real typos.
+__all__ = [
+    # Re-exported standard library / third-party modules used across cmds/*
+    "os", "time", "random", "re", "json", "asyncio", "datetime", "platform",
+    "traceback", "base64", "requests", "discord",
+    # Globals
+    "PREFIX", "START_TIME", "COMMAND_USAGE", "IS_SELF_FORK",
+    # Discord library compatibility
+    "get_intents", "make_bot", "discord_lib_name", "warn_if_wrong_library",
+    "SELF_BOT_CAPABLE", "LIBRARY_WARNING", "LOGIN_ERRORS",
+    # Storage / helpers
+    "save_json", "load_json", "track_cmd", "fmt_time", "code_block",
+    "del_msg", "safe_send", "get_user",
+    # Text transforms
+    "mock_text", "leet", "vaporwave", "zalgo", "reverse_text", "expand_text",
+    "space_text", "to_binary", "from_binary", "to_hex", "from_hex",
+    "b64_encode", "b64_decode", "scramble_word", "scramble_text",
+    "to_cursive", "to_bold", "to_smallcaps",
+]
+
+# ============== DISCORD LIBRARY COMPAT ==============
+# The bot runs on stock discord.py 2.x *and* on the discord.py-self fork.
+# The two disagree about a few constructor options (self forks dropped
+# `discord.Intents` entirely), so everything is negotiated here instead of
+# being hardcoded at the call sites.
+IS_SELF_FORK = not hasattr(discord, "Intents")
+
+
+def get_intents():
+    """Return full Intents for stock discord.py, or None on self forks."""
+    intents_cls = getattr(discord, "Intents", None)
+    if intents_cls is None:
+        return None
+    try:
+        intents = intents_cls.all()
+    except Exception:
+        return None
+    # `typing` is not an intent flag on every version; never die over it.
+    try:
+        intents.typing = False
+    except Exception:
+        pass
+    return intents
+
+
+def make_bot(prefix=PREFIX, **extra):
+    """
+    Build the selfbot `commands.Bot`.
+
+    * `help_command=None` disables discord.py's built-in help command. Without
+      it, registering $REDHELP with a "help" alias raises
+      CommandRegistrationError("The alias help is already an existing command
+      or alias") and the bot never starts.
+    * `intents` is only passed when the installed library supports it.
+    * Any kwarg the installed library rejects is dropped and retried, so an
+      option that exists in one fork but not the other can't kill the boot.
+    """
+    kwargs = {"command_prefix": prefix, "help_command": None}
+    intents = get_intents()
+    if intents is not None:
+        kwargs["intents"] = intents
+    kwargs["self_bot"] = True
+    if not IS_SELF_FORK:
+        kwargs["guild_subscriptions"] = True
+    kwargs.update(extra)
+
+    dropped = []
+    for _ in range(len(kwargs) + 1):
+        try:
+            bot = _dpy_commands.Bot(**kwargs)
+        except TypeError as exc:
+            bad = _rejected_kwarg(exc, kwargs)
+            if bad is None:
+                raise
+            dropped.append(bad)
+            kwargs.pop(bad)
+            continue
+        if dropped:
+            print(f"[i] Ignoring options unsupported by discord {discord.__version__}: "
+                  f"{', '.join(dropped)}")
+        return bot
+    raise TypeError(f"Could not construct commands.Bot (dropped: {', '.join(dropped) or 'none'})")
+
+
+def _rejected_kwarg(exc, kwargs):
+    """Pull the offending kwarg name out of a TypeError, if it names one."""
+    text = str(exc)
+    for name in kwargs:
+        if f"'{name}'" in text or f'"{name}"' in text:
+            return name
+    return None
+
+
+def discord_lib_name():
+    """Best-effort distribution name of the installed discord library."""
+    try:
+        from importlib import metadata
+    except ImportError:
+        return None
+    for candidate in ("discord.py-self", "discord.py-self-next", "discord.py",
+                      "discord", "nextcord", "py-cord"):
+        try:
+            metadata.version(candidate)
+            return candidate
+        except Exception:
+            continue
+    return None
+
+
+# Stock discord.py >= 2.0 dropped self-bot support entirely: it authenticates
+# with `Authorization: Bot <token>` and sends a bot-shaped gateway IDENTIFY, so a
+# *user* token is rejected with LoginFailure("Improper token has been passed").
+# Only the discord.py-self fork performs the user-account handshake this bot needs.
+SELF_BOT_CAPABLE = IS_SELF_FORK or (discord_lib_name() or "").lower() in (
+    "discord.py-self", "discord.py-self-next",
+)
+
+# Exception classes that exist in only one of the two supported libraries
+# (discord.py-self has no PrivilegedIntentsRequired). Building the tuple up front
+# keeps `except` clauses from raising AttributeError while handling an error.
+LOGIN_ERRORS = tuple(
+    cls for cls in (
+        getattr(discord, "LoginFailure", None),
+        getattr(discord, "PrivilegedIntentsRequired", None),
+        getattr(discord, "GatewayNotFound", None),
+    )
+    if isinstance(cls, type) and issubclass(cls, Exception)
+)
+
+LIBRARY_WARNING = (
+    "[!] WRONG DISCORD LIBRARY INSTALLED\n"
+    "[!] Detected: {lib} {ver}\n"
+    "[!]\n"
+    "[!] This is a SELFBOT - it logs in with a user token. Stock discord.py 2.x\n"
+    "[!] removed self-bot support and always authenticates as 'Bot <token>', so\n"
+    "[!] login will fail with \"Improper token has been passed\" no matter what.\n"
+    "[!]\n"
+    "[!] Fix it with:\n"
+    "[!]     pip uninstall -y discord.py discord\n"
+    "[!]     pip install -U \"discord.py-self>=2.0.0,<3.0.0\"\n"
+    "[!]\n"
+    "[!] (requirements.txt already lists the correct package.)"
+)
+
+
+def warn_if_wrong_library():
+    """Print an actionable warning when the installed fork cannot drive a user account."""
+    if SELF_BOT_CAPABLE:
+        print(f"[i] discord library: {discord_lib_name() or 'unknown'} {discord.__version__} (self-bot capable)")
+        return True
+    print(LIBRARY_WARNING.format(
+        lib=discord_lib_name() or "discord.py",
+        ver=getattr(discord, "__version__", "?"),
+    ))
+    return False
 
 # ============== STORAGE ==============
 for _d in ["music", "profiles", "clones", "archives", "logs", "data"]:
@@ -52,16 +211,42 @@ async def del_msg(msg):
     except Exception:
         pass
 
+
+# Keeps a strong reference to pending auto-delete tasks so the event loop does
+# not garbage-collect them before they fire.
+_PENDING_DELETES = set()
+
+
+def _schedule_delete(message, delay):
+    """Delete `message` after `delay` seconds *without* blocking the caller."""
+    async def _reap():
+        try:
+            await asyncio.sleep(delay)
+            await message.delete()
+        except Exception:
+            pass
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return  # no loop (shutting down / sync context) - skip the cleanup
+    task = loop.create_task(_reap())
+    _PENDING_DELETES.add(task)
+    task.add_done_callback(_PENDING_DELETES.discard)
+
+
 async def safe_send(ctx, content=None, **kwargs):
+    """Send a message, optionally scheduling its later deletion.
+
+    The `delete_after` cleanup runs as a background task. It used to be awaited
+    inline, which froze the calling command for the whole delay - `$ai` waited a
+    full 60s before it even contacted the API, and its "thinking" placeholder was
+    already gone by the time the answer arrived.
+    """
     try:
         da = kwargs.pop("delete_after", None)
         m = await ctx.send(content, **kwargs)
         if da and m:
-            try:
-                await asyncio.sleep(da)
-                await m.delete()
-            except Exception:
-                pass
+            _schedule_delete(m, da)
         return m
     except Exception:
         return None
