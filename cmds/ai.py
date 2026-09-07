@@ -32,7 +32,10 @@ def looks_like_code(text):
 
 async def call_ai_sync(cfg, prompt):
     """Run sync HTTP call in executor."""
-    return await asyncio.get_event_loop().run_in_executor(
+    # get_running_loop(), not get_event_loop(): the latter is deprecated and
+    # warns on Python 3.12+ (and raises when no loop is current). This is always
+    # called from inside a running coroutine, so the running loop is correct.
+    return await asyncio.get_running_loop().run_in_executor(
         None, lambda: _call_ai_sync(cfg, prompt)
     )
 
