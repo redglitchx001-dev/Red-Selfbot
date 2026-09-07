@@ -1,48 +1,110 @@
-
 <p align="center">
   <img src="https://i.postimg.cc/cCG6WF7W/5aaa7b437881d00f0521f9e09dbf39e2.jpg" alt="Red SelfBot Banner">
 </p>
 
-<h1 align="center">🔥 RED SELFBOT - v1.0 🔥</h1>
+<h1 align="center">RED SELFBOT V1</h1>
 
 <p align="center">
-  <a href="https://github.com/RedGlitchX/Red-SelfBot/blob/main/LICENSE">
-    <img src="https://img.shields.io/badge/License-Private-red.svg?style=flat-square" alt="License">
-  </a>
-  <a href="https://github.com/python/cpython">
-    <img src="https://img.shields.io/badge/Python-3.10%2B-blue.svg?style=flat-square" alt="Python Version">
-  </a>
-  <a href="https://discord.gg/hzQ8tjh8NT">
-    <img src="https://img.shields.io/badge/Discord-Join%20Server-7289DA?style=flat-square&logo=discord" alt="Discord">
-  </a>
-  <a href="https://github.com/RedGlitchX/Red-SelfBot">
-    <img src="https://img.shields.io/badge/Security-Verified-success?style=flat-square" alt="Security">
-  </a>
-</p>
-
-<p align="center">
-  <b>Red SelfBot</b> is a high-performance, feature-rich automation tool for Discord. <br>
-  Engineered for ultimate efficiency, stability, and advanced control across all platforms.
+  <b>Premium modular Discord selfbot.</b> Python-only build. Live cyberpunk web dashboard,
+  165+ commands across 15 categories, modular per-file categories, AI chat, heavy spam packs,
+  and `$start` that works in servers / groups / DMs with any custom line file.
 </p>
 
 ---
 
-## ⚡ Key Features
-
-* **🎵 Music & Voice Control:** Stream local audio files or download tracks on the fly directly into voice channels.
-* **👤 Profile Archiver & Manager:** Effortlessly archive user profiles, list saved targets with `$prflist`, and inspect or load data using `$prfup [nr]`.
-* **🏰 Server Cloner & Backup:** Clone full server structures (roles, channels, permissions) and restore them seamlessly.
-* **✉️ Advanced Automation:** Configurable multi-line text spamming, live custom streaming statuses, and automatic event loggers.
-* **🛡️ Protection Suite:** Built-in anti-kick/anti-ban triggers, token validity testers, and snipe commands.
-
----
-
-## 🚀 Quick Start & Installation
-
-Clone the repository and install the required dependencies to get started:
+## Quick start
 
 ```bash
-git clone [https://github.com/RedGlitchX/Red-SelfBot.git](https://github.com/RedGlitchX/Red-SelfBot.git)
-cd Red-SelfBot
-python -m pip install -r requirements.txt
+pip install -r requirements.txt
+export DISCORD_TOKEN="your_token"      # or echo "your_token" > token.txt
 python main.py
+```
+
+The dashboard is served on the port in `$PORT` (default `10000`).
+
+## Layout
+
+```
+main.py              # Entry + web dashboard
+cmds/                # One Python module per category
+  help.py   text.py    fun.py     util.py   info.py   spam.py  music.py
+  profiles.py cloner.py archives.py protect.py logger.py status.py multi.py ai.py
+utils/common.py      # Shared helpers / text transforms
+data/lines_*.txt     # $start sequence packs (EN/RO/default, 750k lines each)
+botjura.txt          # Default RO sequence pack (750k lines, legacy path)
+generate_lines.py    # Regenerate line packs up to 1M lines each
+music/ profiles/ clones/ archives/ logs/   # Runtime storage
+```
+
+## Menus
+
+Every help menu is a plain code block (text + symbols only, no inline emojis in the body)
+kept under 1900 characters. Jump to categories with:
+
+| Command | Category |
+|---|---|
+| `$help` / `$REDHELP` | Main menu |
+| `$hcore` | Core / bot info |
+| `$hmusic` | Music & voice (FFmpeg) |
+| `$hspam` | Automation / `$start` sequences |
+| `$hprofile` | Profile archiver |
+| `$hclone` | Server cloner |
+| `$harchive` | Chat archiving |
+| `$hprotect` | Protection suite |
+| `$hlog` | Logger / snipe / track |
+| `$hstatus` | Presence & status |
+| `$htext` | Text transforms (mock/leet/vapor/binary/etc.) |
+| `$hfun` | Fun & games |
+| `$hutil` | Utility commands |
+| `$hinfo` | Server/user info lookup |
+| `$hai` | AI chat module |
+| `$hmulti` | Multi-account |
+| `$hall` | Everything in one scroll |
+
+## `$start` — works everywhere
+
+`$start` works in servers, groups, and DMs. Choose your line pack:
+
+```
+$start                     # default (botjura.txt / $startlang)
+$start @bro                # default pack, pings @bro
+$start @bro en.txt         # en.txt pinging @bro
+$start 123456789 ro.txt    # by user ID, ro.txt
+$start en.txt              # en.txt no mention
+$startl                    # list all line files (counts/sizes/default)
+$startlang en              # switch default to en
+$stop                      # halt everything
+```
+
+Drop any `.txt` file into `data/` and it will appear in `$startl` immediately — no restart.
+Lines can contain `{t}` which gets replaced with the target mention; lines without it just get
+the mention prepended. Three 750,000-line packs are shipped (EN, RO, mixed).
+Regenerate larger packs (up to 1 million lines each) with:
+
+```bash
+python generate_lines.py 1000000
+```
+
+## AI
+
+```
+$aiadd https://api.openai.com/v1/chat/completions gpt-4o-mini sk-xxx
+$aiadd groq https://api.groq.com/openai/v1/chat/completions llama-3.3-70b-versatile gsk_xxx
+$ailist
+$aiswitch 2
+$ai explain quantum computing in simple terms
+```
+
+Responses are formatted `[You] » question / [AI] answer`. Anything over 1500 characters or
+large code blocks is sent as `ai_response_<timestamp>.txt` attached to the message
+(you asked for exactly that behavior). Works with any OpenAI-compatible endpoint
+(OpenAI, Groq, Together, OpenRouter, llama.cpp, Ollama with openai compat, etc.).
+
+## Warning
+
+Selfbots (user-account automation) violate Discord's Terms of Service. Account termination is
+a real risk. Educational purposes only — use at your own risk.
+
+## Credits
+
+Original by RedGlitchX / XTASK / xs7david / @193.7 / NTASK. V1 modular + dashboard build.
