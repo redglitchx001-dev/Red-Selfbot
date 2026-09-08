@@ -1,0 +1,21 @@
+# data/example.txt - EXAMPLE pack showing the $start line format.
+# Lines with {t} get the target mention(s) inserted there.
+# Lines WITHOUT {t} get the mention(s) auto-prepended.
+# Usage: $start @user1 @user2 @user3 data/example.txt  (up to 10 users, file always last)
+# Usage: $start @bro example.txt
+# Usage: $start example.txt   (no mentions, just lines)
+{t} diff, your whole team is carrying you
+yo {t} that aim is a weather forecast: 100% chance of missing
+{t} you call that a play? my grandma clicks faster
+damn {t} trash gameplay but at least the confidence is impressive
+{t} ratio + skill issue + touch grass
+bro {t} stop yapping and check the scoreboard
+{t} ba esti varza rau de tot, mai bine taci si invata sa joci
+auzi {t} te crezi smecher dar scoreboard-ul zice altceva
+{t} frate ai ramas fara argumente si fara skill
+{t} you talk big but the scoreboard says otherwise
+{t} GG only because the enemy team felt bad for you
+ayo {t} certified NPC behavior, background character energy
+{t} all talk no clutch, story of your life
+https://media.giphy.com/media/3o6Zt481isNVuQI1l6/giphy.gif
+{t} cry about it, then run it back and lose again
