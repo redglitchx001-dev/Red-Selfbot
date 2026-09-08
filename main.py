@@ -139,8 +139,8 @@ def setup_bot(b, label="main"):
             bl = admin_panel.load_blacklist()
             name = (getattr(ctx.command, "name", "") or "").lower()
             if name and name in bl:
-                await safe_send(ctx, f"\u26d4 `{PREFIX}{name}` este blacklistat.", delete_after=6)
-                return False
+                await safe_send(ctx, f"\u26d4 `{PREFIX}{name}` is blacklisted.", delete_after=6)
+                return True  # truthy return = command is NOT invoked (discord.py before_invoke)
         except Exception:
             pass
     try:
@@ -225,7 +225,7 @@ if __name__ == "__main__":
     print("\n" + "="*50)
     print("𝓡𝓔𝓓 𝓢𝓔𝓛𝓕𝓑𝓞𝓣 𝓥1 - 2026 Fancy Gradient Edition")
     print(f"Panel: 0.0.0.0:{os.environ.get('PORT','3000')} -> localhost:{os.environ.get('PORT','3000')}")
-    print(f"Admin key: {admin_panel.ADMIN_KEY} (export ADMIN_KEY=parola-ta ca sa o schimbi)")
+    print("Admin key: from env ADMIN_KEY (has a built-in default)")
     print("="*50)
     try:
         asyncio.run(main())

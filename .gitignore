@@ -1,6 +1,7 @@
 # Secrets & runtime admin data (do NOT commit tokens)
 data/users.json
 data/blacklist.json
+data/people.json
 token.txt
 .env
 

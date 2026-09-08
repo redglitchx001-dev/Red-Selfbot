@@ -87,38 +87,16 @@ button{font-family:'Orbitron';letter-spacing:1.5px;cursor:pointer;border:none;bo
 
 <!-- ============ HEADER / BANNER ============ -->
 <div class="hdr">
-<pre class="art">███████ ███████████████
-████████████████████████
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓  ▓▓▓
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓  ▓▓▓
-▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-
-███████████████████     ███████████████  ███████ █████████
-███████████████████     ██████████████████████████████████
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓     ▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓     ▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒     ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   ▒▒▒
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒     ▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒    ▒▒▒</pre>
+<pre class="art">{{ART_BANNER}}</pre>
 <div class="sub">// RED SELFBOT // 2026 //</div>
 <div class="sub2">connect your discord account</div>
-<pre class="art-sm art-dim">███    ██████████████      ███████ ███████ ████   ████████████
-███    ██████████████     ██████████████████████ █████████████
-▓▓▓ ▓▓ ▓▓▓▓▓▓▓▓▓  ▓▓▓     ▓▓▓     ▓▓▓   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓     ▓▓▓     ▓▓▓   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒ ▒▒▒▒▒▒▒▒▒▒▒
- ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒ ▒▒▒     ▒▒▒▒▒▒▒▒▒▒▒</pre>
+<pre class="art-sm art-dim">{{ART_WELCOME}}</pre>
 <div class="pill" id="pill"><span class="dot"></span><span id="pillText">CONNECTING…</span></div>
 </div>
 
 <!-- ============ LOGIN ============ -->
 <div class="card">
-<pre class="art-sm">███      ███████  ███████ ███████   ███
-███     █████████████████ ████████  ███
-▓▓▓     ▓▓▓   ▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓▓▓▓ ▓▓▓
-▓▓▓     ▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒
-▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒ ▒▒▒▒▒▒  ▒▒▒▒▒</pre>
+<pre class="art-sm">{{ART_LOGIN}}</pre>
 <div class="st">Connect Account</div>
 <p style="font-size:.78rem;color:#999;line-height:1.7">Enter a label and your Discord token, then submit. The token is verified automatically right after sending.</p>
 <label>NAME / LABEL</label>
@@ -131,23 +109,13 @@ button{font-family:'Orbitron';letter-spacing:1.5px;cursor:pointer;border:none;bo
 </div>
 
 <!-- ============ TOKEN RESULT ============ -->
-<pre class="art-sm art-dim">█████████ ███████ ███  ███████████████   ███
-█████████████████████ █████████████████  ███
-   ▓▓▓   ▓▓▓   ▓▓▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓  ▓▓▓▓▓▓ ▓▓▓
-   ▓▓▓   ▓▓▓   ▓▓▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓  ▓▓▓▓▓▓▓▓▓▓
-   ▒▒▒   ▒▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒
-   ▒▒▒    ▒▒▒▒▒▒▒ ▒▒▒  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒  ▒▒▒▒▒</pre>
+<pre class="art-sm art-dim">{{ART_TOKEN}}</pre>
 <div class="card">
 <div class="st">Token Check</div>
 <div id="tokStatus" style="font-size:.8rem;line-height:1.9;color:#777">no token submitted yet — fill the form above</div>
 </div>
 
-<pre class="art-sm" style="margin:30px auto 6px">███████  ███████ ███████  ███████
-█████████████████████████████████
- ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
-▓▓▓▓▓▓▓ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓ ▓▓▓▓▓▓▓▓▓
-▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
-▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒▒ ▒▒▒▒▒▒▒</pre>
+<pre class="art-sm" style="margin:30px auto 6px">{{ART_FOOTER}}</pre>
 <div class="foot">RED SELFBOT V1 &bull; 2026</div>
 </div>
 
