@@ -309,15 +309,21 @@ def gen_en_line(rng, with_gif=False):
             line = gif
     return line
 
-def write_file(path, generator_func, n, seed):
+def write_file(path, generator_func, n, seed, line_prefix=""):
     rng = random.Random(seed)
     t0 = time.time()
     with open(path, "w", encoding="utf-8") as f:
         for _ in range(n):
-            f.write(generator_func(rng) + "\n")
+            line = generator_func(rng)
+            if line_prefix:
+                # ensure prefix is "# " with space, not glued
+                # if line already starts with prefix, don't double
+                if not line.startswith(line_prefix):
+                    line = f"{line_prefix}{line}"
+            f.write(line + "\n")
     sz = os.path.getsize(path) / 1024
     dt = time.time() - t0
-    print(f"  {path:35s} {n:>7,} lines  {sz:>7.1f} KB  ({dt:.1f}s)")
+    print(f"  {path:35s} {n:>7,} lines  {sz:>7.1f} KB  ({dt:.1f}s)  prefix='{line_prefix}'")
 
 def main():
     short_n = int(sys.argv[1]) if len(sys.argv) > 1 else 3000
@@ -326,17 +332,17 @@ def main():
 
     print(f"Generating 2026 packs: short={short_n:,} long={long_n:,}")
 
-    # RO short - only romana, no gif, no > # prefix
-    write_file("data/spam_ro.txt", lambda rng: gen_ro_line(rng), short_n, seed=101)
+    # RO short - only romana, no gif, no > # prefix, BIG text
+    write_file("data/spam_ro.txt", lambda rng: gen_ro_line(rng), short_n, seed=101, line_prefix="")
 
     # EN short - only english + gifs, no > #
-    write_file("data/spam_en.txt", lambda rng: gen_en_line(rng, with_gif=True), short_n, seed=202)
+    write_file("data/spam_en.txt", lambda rng: gen_en_line(rng, with_gif=True), short_n, seed=202, line_prefix="")
 
-    # RO long - hardcore roast 2026
-    write_file("data/longspam_ro.txt", lambda rng: gen_ro_line(rng), long_n, seed=303)
+    # RO long - hardcore roast 2026 - WITH "# " prefix at beginning (space not glued)
+    write_file("data/longspam_ro.txt", lambda rng: gen_ro_line(rng), long_n, seed=303, line_prefix="# ")
 
-    # EN long + gifs
-    write_file("data/longspam_en.txt", lambda rng: gen_en_line(rng, with_gif=True), long_n, seed=404)
+    # EN long + gifs - WITH "# " prefix
+    write_file("data/longspam_en.txt", lambda rng: gen_en_line(rng, with_gif=True), long_n, seed=404, line_prefix="# ")
 
     # MIX spam.txt
     def gen_mix(rng):

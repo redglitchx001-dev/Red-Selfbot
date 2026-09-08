@@ -87,7 +87,9 @@ MENUS = {
             "",
             "Packs: spam.txt | spam_ro | spam_en | longspam_ro | longspam_en",
             "RO = only romana | EN = only english + gifs",
-            "No > # prefix - each line is BIG text",
+            "SHORT spam = NO prefix = BIG text",
+            "LONG spam = '# ' prefix cu spatiu (heading mare)",
+            "ex long: '# {t} esti varza' - nu lipit",
         ],
         "footer": "2026 packs: hardcore roast, no slur, multi-target"
     },
