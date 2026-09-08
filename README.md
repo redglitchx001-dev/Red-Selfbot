@@ -22,10 +22,31 @@ python main.py
 
 The dashboard is served on `0.0.0.0:$PORT` (default `3000`, works with preview, not localhost-only). Panel fancy gradient 2026 edition.
 
+## Admin Panel (localhost:3000)
+
+Go to `http://localhost:3000` — fancy gradient + ASCII art admin panel:
+
+- **CONNECT ACCOUNT** — baga `nume` + `token`, se trimite la server si se verifica automat.
+- **ADMIN ACCESS** — deblocheaza cu admin key (default `red2026`, schimba cu `export ADMIN_KEY=parola-ta`).
+- **USERS** — vezi toti userii, tokenul (buton `VEZI` / `COPY`), cine are **token expirat** (rosu), status, adaugat, etc.
+- **ACTIUNI** — `SUSPEND` / `RESUME`, `BAN` / `UNBAN`, `CHECK` (re-verifica tokenul), `DEL` (sterge).
+- **CHECK TOATE TOKENURILE** — re-verifica toate tokenurile in background.
+- **BLACKLIST COMMANDS** — adauga / scoate comenzi blocate (ex: `$restart`, `nuke`). Selfbot-ul le ignora automat.
+
+Poti porni si doar panel-ul fara selfbot (nu cere Discord instalat):
+
+```bash
+python panel.py        # panel standalone pe 0.0.0.0:3000
+```
+
+Datele se salveaza in `data/users.json` si `data/blacklist.json` (ignorate de git).
+
 ## Layout
 
 ```
-main.py              # Entry + web dashboard 0.0.0.0:3000 fancy gradient 2026
+main.py              # Entry + selfbot (serves the admin panel too)
+panel.py             # Admin panel server (stdlib-only, can run standalone)
+panel.html           # Admin panel UI - ascii art + gradient, login, users, blacklist
 cmds/                # One Python module per category
   help.py   text.py    fun.py     util.py   info.py   spam.py  music.py
   profiles.py cloner.py archives.py protect.py logger.py status.py multi.py ai.py

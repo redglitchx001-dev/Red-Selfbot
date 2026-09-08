@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RED SELFBOT - ADMIN PANEL 2026</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Orbitron:wght@700;900&family=Syne:wght@800&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --red:#ff0044; --pink:#ff6688; --green:#00ff88; --amber:#ffbd2e;
+  --bg:#06060a; --card:rgba(24,24,38,.82); --line:rgba(255,0,60,.28);
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:#ddd;font-family:'JetBrains Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(255,0,60,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,0,60,.05) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0;animation:grid 20s linear infinite}
+@keyframes grid{0%{transform:translate(0,0)}100%{transform:translate(48px,48px)}}
+body::after{content:'';position:fixed;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--red),var(--pink),transparent);animation:scan 6s linear infinite;z-index:2;opacity:.6}
+@keyframes scan{0%{top:-2px}100%{top:100vh}}
+.wrap{position:relative;z-index:1;max-width:1240px;margin:0 auto;padding:26px 18px 60px}
+/* ============ HEADER / ASCII ============ */
+.hdr{text-align:center;padding:34px 24px;background:linear-gradient(135deg,rgba(255,0,60,.14),rgba(120,0,30,.06),rgba(255,0,60,.1));border:1px solid var(--line);border-radius:20px;margin-bottom:26px;position:relative;overflow:hidden;box-shadow:0 0 60px rgba(255,0,60,.18), inset 0 1px 0 rgba(255,255,255,.05)}
+.hdr::before{content:'';position:absolute;inset:-4px;background:conic-gradient(from 0deg,transparent,rgba(255,0,60,.3),transparent,rgba(255,100,150,.18),transparent,rgba(255,0,60,.25),transparent);animation:rot 9s linear infinite;z-index:0}
+@keyframes rot{to{transform:rotate(360deg)}}
+.hdr>*{position:relative;z-index:1}
+pre.art{font-size:clamp(.42rem,1.6vw,.8rem);line-height:1.12;letter-spacing:0;font-weight:700;display:inline-block;text-align:center;margin:0 auto;
+  background:linear-gradient(100deg,#ff0044,#ff2a6d 15%,#ff6688 30%,#ff0044 45%,#ff8fab 60%,#ff0044 75%,#ff6688 100%);background-size:200% auto;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:grad 4s linear infinite, glow 2.5s ease-in-out infinite alternate;text-shadow:none}
+@keyframes grad{0%{background-position:0% center}100%{background-position:200% center}}
+@keyframes glow{0%{filter:drop-shadow(0 0 8px rgba(255,0,60,.35))}100%{filter:drop-shadow(0 0 22px rgba(255,0,60,.65))}}
+pre.art-sm{font-size:clamp(.5rem,1.5vw,.72rem);line-height:1.25;letter-spacing:0;font-weight:700;display:block;text-align:center;margin:0 auto 4px;overflow-x:auto;white-space:pre;
+  background:linear-gradient(100deg,#ff0044,#ff2a6d 15%,#ff6688 30%,#ff0044 45%,#ff8fab 60%,#ff0044 75%,#ff6688 100%);background-size:200% auto;
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+  animation:grad 5s linear infinite, glow 2.5s ease-in-out infinite alternate}
+.art-wrap{filter:none}
+.sub{color:#999;font-size:.74rem;letter-spacing:5px;margin-top:8px;font-weight:700;text-transform:uppercase}
+.sub2{color:#555;font-size:.62rem;letter-spacing:3px;margin-top:5px}
+.pill{display:inline-flex;align-items:center;gap:9px;margin-top:16px;padding:7px 18px;border:1px solid rgba(0,255,136,.45);border-radius:50px;font-size:.8rem;color:var(--green);background:rgba(0,255,136,.06);backdrop-filter:blur(8px)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green),0 0 22px rgba(0,255,136,.5);animation:pu 2s infinite}
+@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.4)}}
+/* ============ CARDS / GRID ============ */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:22px;backdrop-filter:blur(12px);box-shadow:0 8px 32px rgba(0,0,0,.4);position:relative}
+.st{font-family:'Orbitron';font-size:1rem;color:#fff;margin-bottom:16px;padding-left:13px;border-left:4px solid var(--red);letter-spacing:2.5px;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+.st::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(255,0,60,.35),transparent)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+/* ============ STATS ============ */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:linear-gradient(135deg,rgba(30,30,45,.75),rgba(20,20,30,.85));border:1px solid var(--line);border-radius:12px;padding:18px;text-align:center;position:relative;overflow:hidden;transition:.3s}
+.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--pink),var(--red));background-size:200% 100%;animation:grad 3s linear infinite}
+.stat:hover{transform:translateY(-3px);border-color:rgba(255,0,60,.55)}
+.stat .v{font-family:'Orbitron';font-size:1.7rem;font-weight:900;color:var(--pink);text-shadow:0 0 14px rgba(255,0,60,.35)}
+.stat .l{font-size:.66rem;color:#666;text-transform:uppercase;letter-spacing:2px;margin-top:5px}
+/* ============ FORMS ============ */
+label{display:block;font-size:.68rem;color:#888;letter-spacing:2px;text-transform:uppercase;margin:14px 0 6px}
+input,select{width:100%;background:#0c0c16;border:1px solid var(--line);border-radius:9px;color:#eee;padding:12px 14px;font-family:'JetBrains Mono';font-size:.86rem;outline:none;transition:.25s}
+input:focus{border-color:var(--pink);box-shadow:0 0 18px rgba(255,0,60,.25)}
+button{font-family:'Orbitron';letter-spacing:1.5px;cursor:pointer;border:none;border-radius:9px;padding:12px 18px;font-size:.78rem;font-weight:700;text-transform:uppercase;transition:.25s}
+.btn-red{background:linear-gradient(135deg,var(--red),#a3002c);color:#fff;box-shadow:0 0 22px rgba(255,0,60,.35);width:100%;margin-top:16px}
+.btn-red:hover{transform:translateY(-2px);box-shadow:0 0 34px rgba(255,0,60,.55)}
+.btn-ghost{background:transparent;border:1px solid var(--line);color:#ccc}
+.btn-ghost:hover{border-color:var(--pink);color:#fff}
+.btn-sm{padding:6px 10px;font-size:.62rem;border-radius:6px;letter-spacing:1px}
+.btn-green{background:rgba(0,255,136,.12);border:1px solid rgba(0,255,136,.4);color:var(--green)}
+.btn-green:hover{background:rgba(0,255,136,.2)}
+.btn-amber{background:rgba(255,189,46,.12);border:1px solid rgba(255,189,46,.4);color:var(--amber)}
+.btn-amber:hover{background:rgba(255,189,46,.2)}
+.btn-red2{background:rgba(255,0,60,.12);border:1px solid rgba(255,0,60,.45);color:var(--pink)}
+.btn-red2:hover{background:rgba(255,0,60,.22)}
+.btn-dim{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);color:#999}
+.btn-dim:hover{color:#fff;border-color:#ccc}
+.row{display:flex;gap:10px}
+.row input{flex:1}
+.msg{margin-top:14px;font-size:.8rem;padding:12px 14px;border-radius:9px;display:none;line-height:1.6;word-break:break-all}
+.msg.ok{display:block;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.35);color:var(--green)}
+.msg.err{display:block;background:rgba(255,0,60,.1);border:1px solid rgba(255,0,60,.4);color:var(--pink)}
+.msg.info{display:block;background:rgba(100,120,255,.1);border:1px solid rgba(100,120,255,.35);color:#9db4ff}
+.hint{font-size:.68rem;color:#555;margin-top:10px;line-height:1.7}
+kbd{background:rgba(255,0,60,.12);border:1px solid var(--line);border-radius:5px;padding:1px 7px;font-size:.72rem;color:var(--pink)}
+/* ============ TABLE ============ */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:#0a0a12}
+table{width:100%;border-collapse:collapse;font-size:.76rem;min-width:900px}
+th{background:linear-gradient(90deg,rgba(255,0,60,.12),rgba(255,0,60,.03));color:#999;text-align:left;padding:11px 12px;font-size:.62rem;letter-spacing:2px;text-transform:uppercase;border-bottom:1px solid var(--line);position:sticky;top:0}
+td{padding:11px 12px;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+tr:hover td{background:rgba(255,0,60,.03)}
+.tag{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.62rem;letter-spacing:1.2px;border:1px solid;white-space:nowrap}
+.st-active{background:rgba(0,255,136,.1);border-color:rgba(0,255,136,.4);color:var(--green)}
+.st-suspended{background:rgba(255,189,46,.1);border-color:rgba(255,189,46,.4);color:var(--amber)}
+.st-banned{background:rgba(255,0,60,.12);border-color:rgba(255,0,60,.5);color:var(--pink)}
+.v-ok{color:var(--green)} .v-expired{color:var(--pink);font-weight:700;text-shadow:0 0 8px rgba(255,0,60,.4)} .v-unknown{color:#888} .v-none{color:#555}
+.av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--red),#660022,var(--pink));display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#fff;font-size:.85rem;border:2px solid var(--red);box-shadow:0 0 12px rgba(255,0,60,.4);overflow:hidden;vertical-align:middle}
+.av img{width:100%;height:100%;object-fit:cover}
+.token{margin-top:5px;font-size:.68rem;color:#777;font-family:'JetBrains Mono'}
+.token .t{letter-spacing:1px}
+.mini{display:flex;gap:6px;flex-wrap:wrap}
+/* ============ BLACKLIST ============ */
+.bl-list{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.bl-item{background:rgba(255,0,60,.08);border:1px solid var(--line);border-radius:20px;padding:6px 8px 6px 14px;font-size:.76rem;display:flex;align-items:center;gap:8px;color:#eee}
+.bl-item b{color:var(--pink);font-weight:700}
+.bl-x{cursor:pointer;color:#888;background:rgba(255,0,60,.15);border:none;border-radius:50%;width:20px;height:20px;line-height:1;font-size:.75rem;font-family:inherit;padding:0}
+.bl-x:hover{color:#fff;background:var(--red)}
+/* ============ TOAST ============ */
+#toast{position:fixed;bottom:24px;right:24px;z-index:99;padding:14px 20px;border-radius:10px;font-size:.8rem;background:#0d0d18;border:1px solid var(--line);box-shadow:0 0 30px rgba(255,0,60,.25);transform:translateY(120%);transition:.35s;max-width:340px}
+#toast.show{transform:translateY(0)}
+#toast.ok{border-color:rgba(0,255,136,.4);color:var(--green)}
+#toast.err{border-color:rgba(255,0,60,.5);color:var(--pink)}
+/* ============ MISC ============ */
+.foot{text-align:center;padding:26px;color:#444;font-size:.7rem;letter-spacing:3.5px;border-top:1px solid rgba(255,0,60,.12);margin-top:8px}
+::-webkit-scrollbar{width:7px;height:7px}::-webkit-scrollbar-track{background:#08080c}::-webkit-scrollbar-thumb{background:linear-gradient(var(--red),#660022);border-radius:4px}
+a{color:var(--pink);text-decoration:none}
+.hidden{display:none!important}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.2);border-top-color:var(--pink);border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ============ HEADER ============ -->
+<div class="hdr">
+<pre class="art">  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+   ██▀███  ▓█████ ▓█████▄
+  ▓██ ▒ ██▒▓█   ▀ ▒██▀ ██▌
+  ▓██ ░▄█ ▒▒███   ░██   █▌
+  ▒██▀▀█▄  ▒▓█  ▄ ░▓█▄   ▌
+  ░██▓ ▒██▒░▒████▒░▒████▓
+  ░ ▒▓ ░▒▓░░░ ▒░ ░ ▒▒▓  ▒
+
+   ██████ ▓█████  ██▓      █████▒▄▄▄▄    ▒█████  ▄▄▄█████▓
+  ▒██    ▒ ▓█   ▀ ▓██▒    ▓██   ▒ ▓█████▄ ▒██▒  ██▒▓  ██▒ ▓▒
+  ░ ▓██▄   ▒███   ▒██░    ▒████ ░ ▒██▒ ▄██▒██░  ██▒▒ ▓██░ ▒░
+    ▒   ██▒▒▓█  ▄ ▒██░    ░▓█▒  ░ ▒██░█▀  ▒██   ██░░ ▓██▓ ░
+  ▒██████▒▒░▒████▒░██████▒░▒█░    ░▓█  ▀█▓░ ████▓▒░  ▒██▒ ░
+  ▒ ▒▓▒ ▒ ░░░ ▒░ ░░ ▒░▓  ░ ▒ ░    ░▒▓███▀
+  ▒░ ▒░▒░▒░  ▒ ░░</pre>
+<div class="sub">// ADMIN PANEL // 2026 FANCY GRADIENT EDITION //</div>
+<div class="sub2">multi-user • token manager • blacklist commands • suspend / ban • ascii + gradient</div>
+<div class="pill"><span class="dot"></span>SYSTEM ONLINE — PORT <span id="portTop">3000</span></div>
+</div>
+
+<pre class="art-sm" style="margin:0 auto 10px">
+█████████████████ ██████ █████████████████
+███▀▀▀▀░░▀▀███▀▀░███▀▀███░▀▀███▀▀░███▀▀▀▀░
+▓▓▓▓▓▓▓█   ▓▓▓   ▓▓▓▓▓▓▓▓   ▓▓▓   ▓▓▓▓▓▓▓█
+░▀▀▀▀▓▓▓   ▓▓▓   ▓▓█▀▀▓▓▓   ▓▓▓   ░▀▀▀▀▓▓▓
+▒▒▒▒▒▒▒▓   ▒▒▓   ▒▒▓  ▒▒▓   ▒▒▓   ▒▒▒▒▒▒▒▓
+░▀▀▀▀▀▀░   ░▀░   ░▀░  ░▀░   ░▀░   ░▀▀▀▀▀▀░
+
+</pre>
+<div class="stats" id="statsBox">
+<div class="stat"><div class="v" id="stTotal">0</div><div class="l">Total Users</div></div>
+<div class="stat"><div class="v" id="stActive">0</div><div class="l">Active</div></div>
+<div class="stat"><div class="v" id="stSusp">0</div><div class="l">Suspended</div></div>
+<div class="stat"><div class="v" id="stBanned">0</div><div class="l">Banned</div></div>
+<div class="stat"><div class="v" id="stExpired" style="color:#ff3366">0</div><div class="l">Token Expirat</div></div>
+<div class="stat"><div class="v" id="stUnknown" style="color:#888">0</div><div class="l">Unknown</div></div>
+</div>
+
+<div class="two">
+<!-- ============ LOGIN ============ -->
+<div class="card">
+<pre class="art-sm">
+█████████ ███████ ███  ███████████████   ███
+░▀▀███▀▀░███▀▀▀█████▓ ███░███▀▀▀▀░█████  ██▓
+   ▓▓▓   ▓▓▓   ▓▓▓▓▓▓▓▓█░ ▓▓▓▓▓█  ▓▓█▓▓█ ▓▓▓
+   ▓▓▓   ▓▓▓   ▓▓▓▓▓█▀▓▓█ ▓▓█▀▀░  ▓▓▓░▓▓█▓▓▓
+   ▒▒▓   ░▒▒▒▒▒▒█░▒▒▓  ▒▒█▒▒▒▒▒▒▒█▒▒▓ ░▒▒▒▒▓
+   ░▀░    ░▀▀▀▀▀░ ░▀░  ░▀░░▀▀▀▀▀▀░░▀░  ░▀▀▀░
+
+</pre>
+<div class="st">CONNECT ACCOUNT</div>
+<p style="font-size:.78rem;color:#999;line-height:1.7">Baga numele + tokenul de Discord aici. Tokenul se trimite la <kbd>localhost:3000</kbd> si se salveaza local in <kbd>data/users.json</kbd>.</p>
+<label>NUME / LABEL</label>
+<input id="loginName" placeholder="ex: contul-meu" autocomplete="off">
+<label>DISCORD TOKEN</label>
+<input id="loginToken" placeholder="pastreaza tokenul aici" autocomplete="off">
+<button class="btn-red" id="btnLogin">» TRIMITE TOKENUL «</button>
+<div class="msg" id="loginMsg"></div>
+<div class="hint">🔒 Tokenul e vizibil doar dupa ce deblochezi admin panel-ul. Selfbot = risc, foloseste pe contul tau.</div>
+</div>
+
+<!-- ============ ADMIN UNLOCK ============ -->
+<div class="card">
+<pre class="art-sm">
+███      ███████  ███████ ███████   ███
+██▓     ███▀▀▀██████▀▀▀▀░ ██▓█████  ██▓
+▓▓▓     ▓▓▓   ▓▓▓▓▓▓  ▓▓▓█▓▓▓▓▓█▓▓█ ▓▓▓
+▓▓▓     ▓▓▓   ▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓░▓▓█▓▓▓
+▒▒▒▒▒▒▒█░▒▒▒▒▒▒█░░▒▒▒▒▒▒█░▒▒▓▒▒▓ ░▒▒▒▒▓
+░▀▀▀▀▀▀░ ░▀▀▀▀▀░  ░▀▀▀▀▀░ ░▀░░▀░  ░▀▀▀░
+
+</pre>
+<div class="st">ADMIN ACCESS</div>
+<p style="font-size:.78rem;color:#999;line-height:1.7">Deblocheaza cu admin key-ul ca sa vezi <b style="color:var(--pink)">users, tokenuri, expirate, suspend/ban si blacklist commands</b>.</p>
+<label>ADMIN KEY</label>
+<div class="row">
+<input id="adminKey" type="password" placeholder="admin key (default: red2026)" autocomplete="off">
+<button class="btn-ghost btn-sm" id="btnUnlock" style="white-space:nowrap">UNLOCK</button>
+</div>
+<div class="msg" id="adminMsg"></div>
+<div class="hint">Schimba key-ul cu <kbd>export ADMIN_KEY=parola-ta</kbd> inainte de a porni serverul.</div>
+</div>
+</div>
+
+<!-- ============ ADMIN PANEL ============ -->
+<div id="adminPanel" class="hidden">
+
+<div style="text-align:center;margin-bottom:22px">
+<pre class="art-sm">
+ ██████ ███████ ████   ███████████   ███
+███▀▀██████▀▀████████ ████▓██▓█████  ██▓
+▓▓▓▓▓▓▓▓▓▓▓  ▓▓▓▓▓█▓▓▓▓█▓▓▓▓▓▓▓▓█▓▓█ ▓▓▓
+▓▓█▀▀▓▓▓▓▓▓  ▓▓▓▓▓▓░▓▓█░▓▓▓▓▓▓▓▓▓░▓▓█▓▓▓
+▒▒▓  ▒▒▓▒▒▒▒▒▒█░▒▒▓ ░▀░ ▒▒▓▒▒▓▒▒▓ ░▒▒▒▒▓
+░▀░  ░▀░░▀▀▀▀▀░ ░▀░     ░▀░░▀░░▀░  ░▀▀▀░
+
+</pre>
+</div>
+
+<div class="card">
+<pre class="art-sm">
+███   ██████████████████████████ ████████
+██▓   ██▓███▀▀▀▀░███▀▀▀▀░███▀▀██████▀▀▀▀░
+▓▓▓   ▓▓▓▓▓▓▓▓▓▓█▓▓▓▓▓█  ▓▓▓▓▓▓█░▓▓▓▓▓▓▓█
+▓▓▓   ▓▓▓░▀▀▀▀▓▓▓▓▓█▀▀░  ▓▓█▀▀▓▓█░▀▀▀▀▓▓▓
+░▒▒▒▒▒▒█░▒▒▒▒▒▒▒▓▒▒▒▒▒▒▒█▒▒▓  ▒▒▓▒▒▒▒▒▒▒▓
+ ░▀▀▀▀▀░ ░▀▀▀▀▀▀░░▀▀▀▀▀▀░░▀░  ░▀░░▀▀▀▀▀▀░
+
+</pre>
+<div class="st">USERS <span style="font-size:.6rem;color:#555;letter-spacing:2px" id="checkState"></span></div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+<button class="btn-ghost btn-sm" id="btnReload">⟳ REFRESH</button>
+<button class="btn-amber btn-sm" id="btnCheckAll">⚡ CHECK TOATE TOKENURILE</button>
+<button class="btn-dim btn-sm" id="btnToggleTok">👁 TOKENURI: HIDDEN</button>
+</div>
+<div class="tbl-wrap">
+<table>
+<thead><tr>
+<th>User</th><th>Discord</th><th>Token</th><th>Status</th><th>Token Check</th><th>Adaugat</th><th>Actiuni</th>
+</tr></thead>
+<tbody id="userRows"><tr><td colspan="7" style="text-align:center;color:#555;padding:26px">[ locked — deblocheaza admin panel ]</td></tr></tbody>
+</table>
+</div>
+</div>
+
+<div class="card">
+<pre class="art-sm">
+███████  ██████ ████   ███
+███▀▀██████▀▀████████  ██▓
+▓▓▓▓▓▓█░▓▓▓▓▓▓▓▓▓▓█▓▓█ ▓▓▓
+▓▓█▀▀▓▓█▓▓█▀▀▓▓▓▓▓▓░▓▓█▓▓▓
+▒▒▒▒▒▒█░▒▒▓  ▒▒▓▒▒▓ ░▒▒▒▒▓
+░▀▀▀▀▀░ ░▀░  ░▀░░▀░  ░▀▀▀░
+
+</pre>
+<div class="st">BLACKLIST COMMANDS</div>
+<p style="font-size:.74rem;color:#999;margin-bottom:12px">Comenzile din lista sunt blocate — selfbot-ul le ignora (vezi <kbd>main.py</kbd> unde se face check-ul).</p>
+<div class="bl-list" id="blList"><span style="color:#555;font-size:.76rem">incarc...</span></div>
+<div class="row">
+<input id="blInput" placeholder="comanda de blocat, ex: $ban sau restart" autocomplete="off">
+<button class="btn-red2 btn-sm" id="btnBlAdd" style="white-space:nowrap">+ BLOCHEAZA</button>
+</div>
+<div class="msg" id="blMsg"></div>
+</div>
+
+<div class="card">
+<pre class="art-sm">
+ ███████ ████   ██████     ███████   ███████████
+███▀▀▀████████  ██▓██▓     ██▓█████  ██▓███▀▀▀▀░
+▓▓▓   ▓▓▓▓▓█▓▓█ ▓▓▓▓▓▓     ▓▓▓▓▓█▓▓█ ▓▓▓▓▓▓▓▓█
+▓▓▓   ▓▓▓▓▓▓░▓▓█▓▓▓▓▓▓     ▓▓▓▓▓▓░▓▓█▓▓▓▓▓█▀▀░
+░▒▒▒▒▒▒█░▒▒▓ ░▒▒▒▒▓▒▒▒▒▒▒▒█▒▒▓▒▒▓ ░▒▒▒▒▓▒▒▒▒▒▒▒█
+ ░▀▀▀▀▀░ ░▀░  ░▀▀▀░░▀▀▀▀▀▀░░▀░░▀░  ░▀▀▀░░▀▀▀▀▀▀░
+
+</pre>
+<div class="st">SYSTEM / BOT STATUS</div>
+<div id="sysStatus" style="font-size:.78rem;line-height:2;color:#aaa">incarc...</div>
+</div>
+
+</div><!-- /adminPanel -->
+
+<pre class="art-sm" style="margin:34px auto 4px">
+███████  ███████ ███████  ███████
+░▀▀▀▀██████▀█████░▀▀▀▀██████▀▀▀▀░
+ ▓▓▓▓▓█░▓▓▓▓▓█▓▓▓ ▓▓▓▓▓█░▓▓▓▓▓▓▓█
+▓▓█▀▀▀░ ▓▓▓▓█░▓▓▓▓▓█▀▀▀░ ▓▓█▀▀▀▓▓█
+▒▒▒▒▒▒▒█░▒▒▒▒▒▒█░▒▒▒▒▒▒▒█░▒▒▒▒▒▒█░
+░▀▀▀▀▀▀░ ░▀▀▀▀▀░ ░▀▀▀▀▀▀░ ░▀▀▀▀▀░
+
+</pre>
+<pre class="art-sm" style="margin:30px 0 6px">▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░ ▓▒░</pre>
+<div class="foot">RED SELFBOT V1 • by RedGlitchX • ADMIN PANEL 2026 • ascii + gradient • localhost:3000</div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+let users=[];                 // full user objects in memory (tokens kept here, not in DOM until reveal)
+let tokensVisible=false;
+let ADMIN_KEY=localStorage.getItem('red_admin_key')||null;
+let bl=[];
+
+const PREFIX='$';
+
+// ---------- tiny helpers ----------
+function toast(msg,cls){const t=$('toast');t.textContent=msg;t.className='show '+cls;setTimeout(()=>t.className='',2600);}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function mask(t){t=t||'';if(t.length<=10)return '•'.repeat(Math.max(t.length,1));return t.slice(0,4)+'…'+t.slice(-4);}
+function vBadge(v){
+  if(v===true) return '<span class="tag v-ok">● VALID</span>';
+  if(v===false) return '<span class="tag v-expired">✖ EXPIRAT</span>';
+  if(v===null) return '<span class="tag v-unknown">? UNKNOWN</span>';
+  return '<span class="tag v-none">— NECHECK</span>';
+}
+function stBadge(s){
+  if(s==='banned') return '<span class="tag st-banned">⛔ BANNED</span>';
+  if(s==='suspended') return '<span class="tag st-suspended">⏸ SUSPENDED</span>';
+  return '<span class="tag st-active">● ACTIVE</span>';
+}
+function avatar(u){
+  if(u.avatar && u.id){const ext=String(u.avatar).startsWith('a_')?'gif':'png';return `<span class="av"><img src="https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.${ext}?size=64" alt=""></span>`;}
+  return `<span class="av">${esc((u.name||'?').slice(0,1).toUpperCase())}</span>`;
+}
+async function api(path,method='GET',body=null){
+  const opt={method,headers:{}};
+  if(body){opt.headers['Content-Type']='application/json';opt.body=JSON.stringify(body);}
+  if(ADMIN_KEY)opt.headers['X-Admin-Key']=ADMIN_KEY;
+  const r=await fetch(path,opt);
+  let j={};try{j=await r.json();}catch(e){}
+  return {status:r.status,data:j};
+}
+function fmtAgo(ts){if(!ts)return '—';const s=Math.floor(Date.now()/1000-ts);if(s<60)return s+'s ago';if(s<3600)return Math.floor(s/60)+'m ago';if(s<86400)return Math.floor(s/3600)+'h ago';return Math.floor(s/86400)+'d ago';}
+
+// ---------- status / stats ----------
+function updateStats(){
+  const active=users.filter(u=>u.status==='active').length;
+  const susp=users.filter(u=>u.status==='suspended').length;
+  const banned=users.filter(u=>u.status==='banned').length;
+  const expired=users.filter(u=>u.valid===false).length;
+  const unknown=users.filter(u=>u.valid===null).length;
+  $('stTotal').textContent=users.length;
+  $('stActive').textContent=active;
+  $('stSusp').textContent=susp;
+  $('stBanned').textContent=banned;
+  $('stExpired').textContent=expired;
+  $('stUnknown').textContent=unknown;
+}
+
+// ---------- users ----------
+function renderUsers(){
+  const rows=$('userRows');
+  if(!users.length){rows.innerHTML='<tr><td colspan="7" style="text-align:center;color:#555;padding:26px">niciun user — baga un token in CONNECT ACCOUNT</td></tr>';updateStats();return;}
+  rows.innerHTML=users.map(u=>{
+    const name=esc(u.name);
+    const disc=u.username?`${esc(u.username)}${u.discriminator&&u.discriminator!=='0'?'#'+u.discriminator:''}`:'<span style="color:#555">neconectat</span>';
+    const discSub=u.id?`<div class="token">ID: ${esc(u.id)}</div>`:'';
+    const tok=tokensVisible?esc(u.token):esc(mask(u.token));
+    const err=u.last_error?`<div class="token" style="color:#ff6688" title="${esc(u.last_error)}">${esc(String(u.last_error).slice(0,40))}</div>`:'';
+    const acts=u.status==='banned'
+      ? `<button class="btn-green btn-sm" onclick="act('${esc(u.name)}','unban')">UNBAN</button>`
+      : u.status==='suspended'
+        ? `<button class="btn-green btn-sm" onclick="act('${esc(u.name)}','unsuspend')">RESUME</button><button class="btn-red2 btn-sm" onclick="act('${esc(u.name)}','ban')">BAN</button>`
+        : `<button class="btn-amber btn-sm" onclick="act('${esc(u.name)}','suspend')">SUSPEND</button><button class="btn-red2 btn-sm" onclick="act('${esc(u.name)}','ban')">BAN</button>`;
+    return `<tr>
+<td><div style="display:flex;align-items:center;gap:10px">${avatar(u)}<div><b style="color:#fff">${name}</b></div></div></td>
+<td>${disc}${discSub}</td>
+<td><div class="token"><span class="t" id="tok_${esc(u.name)}">${tok}</span><div class="mini" style="margin-top:4px">
+<button class="btn-dim btn-sm" onclick="reveal('${esc(u.name)}')">👁 VEZI</button>
+<button class="btn-dim btn-sm" onclick="copyTok('${esc(u.name)}')">📋 COPY</button></div>${err}</div></td>
+<td>${stBadge(u.status)}</td>
+<td>${vBadge(u.valid)}<div class="token">${u.last_check?fmtAgo(u.last_check):''}</div></td>
+<td style="color:#777">${u.added_at?new Date(u.added_at*1000).toLocaleString():'—'}</td>
+<td><div class="mini">${acts}<button class="btn-dim btn-sm" onclick="act('${esc(u.name)}','check')">↻ CHECK</button><button class="btn-red2 btn-sm" onclick="act('${esc(u.name)}','delete')">🗑 DEL</button></div></td>
+</tr>`;
+  }).join('');
+  updateStats();
+  $('checkState').textContent=checking?'[checking…]':'';
+}
+let checking=false;
+function findUser(name){return users.find(u=>u.name.toLowerCase()===String(name).toLowerCase());}
+function reveal(name){
+  const u=findUser(name);if(!u)return;
+  const el=document.getElementById('tok_'+u.name);
+  if(!el)return;
+  const isFull=el.textContent===u.token;
+  el.textContent=isFull?mask(u.token):u.token;
+}
+function copyTok(name){
+  const u=findUser(name);if(!u)return;
+  if(navigator.clipboard){navigator.clipboard.writeText(u.token).then(()=>toast('token copiat ✓','ok'));}
+  else{toast('copiere nereusita','err');}
+}
+async function loadUsers(){
+  const {status,data}=await api('/api/users');
+  if(status===401){toast('admin key invalid — re-unlock','err');return;}
+  users=data.users||[];checking=data.checking||false;
+  renderUsers();
+}
+async function act(name,action){
+  const {status,data}=await api('/api/user','POST',{name,action});
+  if(data.ok){toast(action+' ✓','ok');users=data.users||[];renderUsers();}
+  else toast(data.error||('status '+status),'err');
+}
+
+// ---------- blacklist ----------
+function renderBl(){
+  $('blList').innerHTML=bl.length?bl.map(c=>`<span class="bl-item"><b>${PREFIX}${esc(c)}</b><button class="bl-x" onclick="removeBl('${esc(c)}')">×</button></span>`).join(''):'<span style="color:#555;font-size:.76rem">nicio comanda blocata</span>';
+}
+async function loadBl(){
+  const {data}=await api('/api/blacklist');
+  bl=data.blacklist||[];renderBl();
+}
+async function addBl(){
+  const c=$('blInput').value.trim();if(!c)return toast('scrie o comanda','err');
+  const {data}=await api('/api/blacklist','POST',{cmd:c});
+  if(data.ok){bl=data.blacklist;renderBl();$('blInput').value='';toast('blocat: '+PREFIX+c+' ✓','ok');}
+  else toast(data.error||'eroare','err');
+}
+async function removeBl(c){
+  const {data}=await api('/api/blacklist','DELETE',{cmd:c});
+  if(data.ok){bl=data.blacklist;renderBl();toast('deblocat: '+PREFIX+c,'ok');}
+  else toast('eroare','err');
+}
+
+// ---------- login ----------
+async function login(){
+  const name=$('loginName').value.trim();
+  const token=$('loginToken').value.trim();
+  const m=$('loginMsg');
+  if(!name||!token){m.className='msg err';m.textContent='⚠ baga si numele si tokenul.';return;}
+  const b=$('btnLogin');b.disabled=true;b.innerHTML='<span class="spin"></span> SE TRIMITE...';
+  const {status,data}=await api('/api/login','POST',{name,token});
+  b.disabled=false;b.innerHTML='» TRIMITE TOKENUL «';
+  if(data.ok){
+    const u=data.user;
+    m.className='msg ok';
+    m.innerHTML=`✓ Token trimis + verificat.<br>Nume: <b>${esc(u.name)}</b> &nbsp; Discord: <b>${esc(u.username||'—')}</b><br>Token check: ${vBadge(u.valid)}`;
+    $('loginToken').value='';
+    if(ADMIN_KEY)loadUsers();
+  }else{
+    m.className='msg err';m.textContent='⚠ '+(data.error||('status '+status));
+  }
+}
+
+// ---------- admin unlock ----------
+async function unlock(){
+  const key=$('adminKey').value.trim();
+  const m=$('adminMsg');
+  const {status,data}=await api('/api/admin/verify','POST',{key});
+  if(data.ok){
+    ADMIN_KEY=key;localStorage.setItem('red_admin_key',key);
+    m.className='msg ok';m.textContent='✓ deblocat. Se incarca panel-ul...';
+    enterAdmin();
+  }else{
+    m.className='msg err';m.textContent='⚠ admin key gresita.';
+  }
+}
+function enterAdmin(){
+  $('adminPanel').classList.remove('hidden');
+  $('adminMsg').className='msg';$('adminMsg').textContent='';
+  loadUsers();loadBl();loadStatus();
+}
+function toggleTok(){
+  tokensVisible=!tokensVisible;
+  $('btnToggleTok').textContent=tokensVisible?'👁 TOKENURI: VISIBLE':'👁 TOKENURI: HIDDEN';
+  renderUsers();
+}
+
+// ---------- check all ----------
+async function checkAll(){
+  const b=$('btnCheckAll');b.disabled=true;b.innerHTML='<span class="spin"></span> CHECKING...';
+  const {data}=await api('/api/check','POST',{});
+  if(data.started)toast('check pornit in background — refresh in cateva secunde','ok');
+  else toast(data.error||'check deja in curs','err');
+  b.disabled=false;b.innerHTML='⚡ CHECK TOATE TOKENURILE';
+  // poll until done
+  let tries=0;
+  const iv=setInterval(async()=>{
+    tries++;
+    const r=await api('/api/users');
+    users=(r.data&&r.data.users)||users;
+    checking=(r.data&&r.data.checking)||false;
+    renderUsers();
+    if(!checking||tries>60){clearInterval(iv);}
+  },3000);
+}
+
+// ---------- system status ----------
+async function loadStatus(){
+  const {data}=await api('/api/status');
+  const el=$('sysStatus');
+  if(!data){el.textContent='server offline';return;}
+  $('portTop').textContent=data.port||'3000';
+  const up=data.uptime||0;
+  const d=Math.floor(up/86400),h=Math.floor(up%86400/3600),mi=Math.floor(up%3600/60),s=up%60;
+  el.innerHTML=
+    `<span style="color:#00ff88">●</span> <b style="color:#fff">Server:</b> ONLINE &nbsp;•&nbsp; port <b style="color:#ff6688">${esc(data.port)}</b><br>`+
+    `<b style="color:#fff">Selfbot:</b> ${data.bot&&data.bot.online?'<span style="color:#00ff88">conectat ✓</span>':'<span style="color:#555">nu ruleaza (porneste main.py)</span>'}`+
+    (data.bot&&data.bot.name?` &nbsp;•&nbsp; @${esc(data.bot.name)}`:'')+`<br>`+
+    `<b style="color:#fff">Prefix:</b> <kbd>${esc(data.prefix||'$')}</kbd> &nbsp;•&nbsp; <b style="color:#fff">Uptime:</b> ${d}d ${h}h ${mi}m ${s}s`;
+}
+
+// ---------- init ----------
+function bind(){
+  $('btnLogin').onclick=login;
+  $('loginToken').addEventListener('keydown',e=>{if(e.key==='Enter')login();});
+  $('btnUnlock').onclick=unlock;
+  $('adminKey').addEventListener('keydown',e=>{if(e.key==='Enter')unlock();});
+  $('btnReload').onclick=()=>{loadUsers();loadBl();};
+  $('btnCheckAll').onclick=checkAll;
+  $('btnToggleTok').onclick=toggleTok;
+  $('btnBlAdd').onclick=addBl;
+  $('blInput').addEventListener('keydown',e=>{if(e.key==='Enter')addBl();});
+}
+bind();
+loadStatus();
+if(ADMIN_KEY)enterAdmin();
+setInterval(loadStatus,8000);
+setInterval(()=>{if(ADMIN_KEY)loadUsers();},15000);
+</script>
+</body>
+</html>

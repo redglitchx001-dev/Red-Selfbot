@@ -1,0 +1,16 @@
+# Secrets & runtime admin data (do NOT commit tokens)
+data/users.json
+data/blacklist.json
+token.txt
+.env
+
+# Runtime storage
+music/
+profiles/
+clones/
+archives/
+logs/
+
+# Python
+__pycache__/
+*.pyc
