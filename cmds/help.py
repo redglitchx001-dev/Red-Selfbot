@@ -1,16 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Help menu system for Red Selfbot V1 - compact (<=1900 chars per menu)."""
+"""Help menu system for Red Selfbot V1 - Fancy 2026 edition."""
 from utils.common import *
 
-# Each menu fits under 1900 characters. Categories listed with their help command.
+# Fancy unicode fonts
+# Using script / double-struck for premium look
+
 MENUS = {
     "main": {
-        "title": "RED SELFBOT V1 - MAIN MENU",
-        "emoji": "[*]",
+        "title": "𝓡𝓔𝓓 𝓢𝓔𝓛𝓕𝓑𝓞𝓣 𝓥1",
+        "subtitle": "PREMIUM CONTROL PANEL // 2026 EDITION",
+        "emoji": "⚡",
         "items": [
             "$hcore    - Core / bot info",
             "$hmusic   - Music & voice",
-            "$hspam    - Automation & sequences",
+            "$hspam    - Automation & sequences [MULTI-USER]",
             "$hprofile - Profile archiver",
             "$hclone   - Server cloner",
             "$harchive - Chat copy & paste",
@@ -25,11 +28,11 @@ MENUS = {
             "$hmulti   - Multi-account",
             "$hall     - All commands (long list)",
         ],
-        "footer": "Type a command for details. Prefix: $"
+        "footer": "Type a command for details. Prefix: $  |  $start @user1 @user2 file"
     },
     "core": {
         "title": "CORE",
-        "emoji": "[#]",
+        "emoji": "♦",
         "items": [
             "$ping      - Gateway latency",
             "$uptime    - Session uptime",
@@ -38,13 +41,13 @@ MENUS = {
             "$remstats  - Clear status",
             "$prefix    - Show prefix",
             "$about     - About Red Selfbot",
-            "$dashboard - Show dashboard URL",
+            "$dashboard - Show dashboard URL (port 3000)",
         ],
         "footer": "$help returns here"
     },
     "music": {
         "title": "MUSIC & VOICE",
-        "emoji": "[♪]",
+        "emoji": "♪",
         "items": [
             "$plays [n]   - Play track #n or by name",
             "$stops       - Stop & leave channel",
@@ -63,11 +66,14 @@ MENUS = {
         "footer": "Requires ffmpeg installed"
     },
     "spam": {
-        "title": "AUTOMATION / SEQUENCES",
-        "emoji": "[>]",
+        "title": "AUTOMATION / SEQUENCES [2026]",
+        "emoji": "▶",
         "items": [
-            "$start [@u] [file]  - Run sequence",
-            "$startl           - List line files",
+            "$start [@u1 @u2 ...] [file] - Run sequence MULTI-USER",
+            "  ex: $start @ionut @vasile data/longspam_en.txt",
+            "  ex: $start ionut vasile alex spam_ro.txt",
+            "  ex: $start @user1 @user2 ro",
+            "$startl           - List all line files (fancy)",
             "$startlang <name> - Set default file",
             "$stop             - Stop all",
             "$spam [msg] [n][d]- Repeat msg n times",
@@ -78,12 +84,16 @@ MENUS = {
             "$repeat [n]       - Repeat your last msg",
             "$autoreact [e]    - Auto-react to msgs",
             "$massmention      - Mention online members",
+            "",
+            "Packs: spam.txt | spam_ro | spam_en | longspam_ro | longspam_en",
+            "RO = only romana | EN = only english + gifs",
+            "No > # prefix - each line is BIG text",
         ],
-        "footer": "WARNING: use at own risk"
+        "footer": "2026 packs: hardcore roast, no slur, multi-target"
     },
     "profile": {
         "title": "PROFILE ARCHIVER",
-        "emoji": "[@]",
+        "emoji": "@",
         "items": [
             "$prfdwn @u   - Save user profile",
             "$prflist     - List saved profiles",
@@ -95,7 +105,7 @@ MENUS = {
     },
     "clone": {
         "title": "SERVER CLONER",
-        "emoji": "[C]",
+        "emoji": "C",
         "items": [
             "$dsrv        - Backup current server",
             "$lsrv        - List backups",
@@ -106,7 +116,7 @@ MENUS = {
     },
     "archive": {
         "title": "CHAT ARCHIVE",
-        "emoji": "[A]",
+        "emoji": "A",
         "items": [
             "$clchat [n]  - Save last n messages",
             "$clist       - List saved archives",
@@ -117,7 +127,7 @@ MENUS = {
     },
     "protect": {
         "title": "PROTECTION",
-        "emoji": "[!]",
+        "emoji": "!",
         "items": [
             "$anti-kick   - Toggle anti-kick",
             "$anti-ban    - Toggle anti-ban",
@@ -131,7 +141,7 @@ MENUS = {
     },
     "log": {
         "title": "LOGGER & SNIPE",
-        "emoji": "[L]",
+        "emoji": "L",
         "items": [
             "$logchat     - Toggle channel logging",
             "$logdm       - Toggle DM logging",
@@ -145,7 +155,7 @@ MENUS = {
     },
     "status": {
         "title": "PRESENCE",
-        "emoji": "[S]",
+        "emoji": "S",
         "items": [
             "$stats [t]   - Playing status",
             "$live [t]    - Streaming status",
@@ -162,7 +172,7 @@ MENUS = {
     },
     "text": {
         "title": "TEXT TRANSFORMS",
-        "emoji": "[T]",
+        "emoji": "T",
         "items": [
             "$mock [t]    - mOcK tExT",
             "$leet [t]    - 1337 5p34k",
@@ -188,7 +198,7 @@ MENUS = {
     },
     "fun": {
         "title": "FUN & GAMES",
-        "emoji": "[F]",
+        "emoji": "F",
         "items": [
             "$8ball [q]   - Magic 8ball",
             "$flip        - Coin flip",
@@ -217,7 +227,7 @@ MENUS = {
     },
     "util": {
         "title": "UTILITIES",
-        "emoji": "[U]",
+        "emoji": "U",
         "items": [
             "$ping        - Latency",
             "$uptime      - Uptime",
@@ -246,7 +256,7 @@ MENUS = {
     },
     "info": {
         "title": "INFORMATION",
-        "emoji": "[i]",
+        "emoji": "i",
         "items": [
             "$userinfo @u - User details",
             "$serverinfo  - Server details",
@@ -266,7 +276,7 @@ MENUS = {
     },
     "multi": {
         "title": "MULTI ACCOUNT",
-        "emoji": "[M]",
+        "emoji": "M",
         "items": [
             "$selfbot t n - Add token as name",
             "$selfbot     - List accounts",
@@ -277,7 +287,7 @@ MENUS = {
     },
     "ai": {
         "title": "AI CHAT",
-        "emoji": "[AI]",
+        "emoji": "AI",
         "items": [
             "$aiadd e m k - Add endpoint/model/key",
             "$ailist      - List saved configs",
@@ -290,12 +300,38 @@ MENUS = {
     },
 }
 
+def fancy_border(title, emoji):
+    # Create fancy gradient-like border
+    top = "╭─━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─╮"
+    bottom = "╰─━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─╯"
+    # fancy title line with emoji
+    title_line = f"│ {emoji}  {title}  {emoji} │"
+    return top, title_line, bottom
+
 def render_menu(key):
-    m = MENUS[key]
-    lines = [f"{m['emoji']} {m['title']} {m['emoji']}"]
+    m = MENUS.get(key)
+    if not m:
+        return "Unknown menu"
+    top, title_line, bottom = fancy_border(m['title'], m['emoji'])
+    # subtitle for main
+    lines = []
+    lines.append(top)
+    lines.append(title_line)
+    if key == "main" and "subtitle" in m:
+        lines.append(f"│ {m['subtitle']} │")
+    lines.append("├─━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─┤")
     for it in m["items"]:
-        lines.append(f"  {it}")
-    lines.append(f"--- {m['footer']} ---")
+        # ensure we don't exceed 1900 chars, but keep formatting
+        lines.append(f"│ {it}")
+    lines.append("├─━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━─┤")
+    lines.append(f"│ {m['footer']} │")
+    lines.append(bottom)
+    # Add extra fancy footer for main
+    if key == "main":
+        lines.append("")
+        lines.append("  ✦ 𝓡𝓔𝓓 𝓢𝓔𝓛𝓕𝓑𝓞𝓣 𝓥1 ✦ 2026 EDITION ✦")
+        lines.append("  ➤ $start @user1 @user2 spam_en.txt  (MULTI)")
+        lines.append("  ➤ $start ionut vasile alex longspam_ro.txt")
     return "\n".join(lines)
 
 def register(b, state):
@@ -308,14 +344,14 @@ def register(b, state):
     @b.command(name="REDHELP", aliases=["help", "h"])
     async def _help(ctx):
         track_cmd("help")
-        await show(ctx, "main", delete_after=35)
+        await show(ctx, "main", delete_after=40)
 
     @b.command(name="hcore")
     async def _hcore(ctx): await show(ctx, "core")
     @b.command(name="hmusic")
     async def _hmus(ctx): await show(ctx, "music")
     @b.command(name="hspam")
-    async def _hsp(ctx): await show(ctx, "spam")
+    async def _hsp(ctx): await show(ctx, "spam", delete_after=40)
     @b.command(name="hprofile")
     async def _hpr(ctx): await show(ctx, "profile")
     @b.command(name="hclone")
@@ -338,6 +374,8 @@ def register(b, state):
     async def _hin(ctx): await show(ctx, "info")
     @b.command(name="hmulti")
     async def _hml(ctx): await show(ctx, "multi")
+    @b.command(name="hai")
+    async def _hai(ctx): await show(ctx, "ai")
 
     @b.command(name="hall")
     async def _hall(ctx):
@@ -362,7 +400,7 @@ def register(b, state):
         if cur:
             chunks.append(cur)
         for i, ch in enumerate(chunks):
-            await safe_send(ctx, code_block(ch), delete_after=(20 if i < len(chunks)-1 else 45))
+            await safe_send(ctx, code_block(ch), delete_after=(20 if i < len(chunks)-1 else 50))
 
     # Simple text-only info commands
     @b.command(name="prefix")
@@ -376,9 +414,13 @@ def register(b, state):
         track_cmd("about")
         await del_msg(ctx.message)
         about_txt = (
-            "RED SELFBOT V1\n"
-            "Written by RedGlitchX • Premium build\n"
-            f"Python {platform.python_version()} • discord.py-self\n"
+            "╭─ 𝓡𝓔𝓓 𝓢𝓔𝓛𝓕𝓑𝓞𝓣 𝓥1 ─╮\n"
+            "│ 2026 EDITION - Premium build │\n"
+            "│ Written by RedGlitchX • Fancy gradient │\n"
+            f"│ Python {platform.python_version()} • discord.py-self │\n"
+            "│ Multi-user $start: $start @u1 @u2 file │\n"
+            "│ Dashboard: 0.0.0.0:3000 (PORT env) │\n"
+            "╰──────────────────────────────╯\n"
             "All commands: $help"
         )
         await safe_send(ctx, code_block(about_txt), delete_after=15)
@@ -387,5 +429,5 @@ def register(b, state):
     async def _dash(ctx):
         track_cmd("dashboard")
         await del_msg(ctx.message)
-        port = os.environ.get("PORT", "10000")
-        await safe_send(ctx, f"Dashboard running on port `{port}` (visit server root URL).", delete_after=10)
+        port = os.environ.get("PORT", "3000")
+        await safe_send(ctx, f"Dashboard running on `0.0.0.0:{port}` • http://localhost:{port} • Preview: / (host header allowed)", delete_after=12)

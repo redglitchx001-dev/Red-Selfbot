@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
-"""Automation / sequence commands."""
+"""Automation / sequence commands - multi-user + new packs 2026."""
 from utils.common import *
+import re
 
 # Default generic messages for $start (used if no data files exist at all)
 DEFAULT_MESSAGES = ["Sequence active.", "Red Selfbot V1 online.", "Hey!", "Anyone around?", "Wake up!"]
 
 def list_seq_files():
-    """Return list of available .txt line files (data/*.txt + botjura.txt)."""
+    """Return list of available .txt line files (data/*.txt + botjura.txt). Sorted fancy."""
     files = []
     if os.path.isdir("data"):
         for f in os.listdir("data"):
@@ -14,6 +15,22 @@ def list_seq_files():
                 files.append(os.path.join("data", f))
     if os.path.exists("botjura.txt"):
         files.append("botjura.txt")
+    # sort: spam_ro, spam_en, longspam, lines_, etc first
+    def sort_key(p):
+        b = os.path.basename(p).lower()
+        order = {
+            "spam.txt": 0,
+            "spam_ro.txt": 1,
+            "spam_en.txt": 2,
+            "longspam_ro.txt": 3,
+            "longspam_en.txt": 4,
+            "lines_ro.txt": 5,
+            "lines_en.txt": 6,
+            "lines_default.txt": 7,
+            "botjura.txt": 8,
+        }
+        return (order.get(b, 99), b)
+    files.sort(key=sort_key)
     return files
 
 def resolve_seq_file(name):
@@ -21,119 +38,200 @@ def resolve_seq_file(name):
     if not name:
         return None
     name = name.strip()
+    # direct path exists
+    if os.path.isfile(name):
+        return name
+    # clean
     candidates = [
         name,
         f"data/{name}",
         f"data/{name}.txt" if not name.endswith(".txt") else None,
         f"data/lines_{name}.txt",
+        f"data/spam_{name}.txt",
+        f"data/longspam_{name}.txt",
     ]
+    # also try lower
     for c in candidates:
+        if c and os.path.isfile(c):
+            return c
+    # try with lower case
+    low = name.lower()
+    for c in candidates:
+        if c and os.path.isfile(c.lower()):
+            return c.lower()
         if c and os.path.isfile(c):
             return c
     # fuzzy search: list all files and do substring match
     for f in list_seq_files():
         base = os.path.basename(f).lower()
-        if name.lower() == base:
+        name_low = low
+        # exact base
+        if name_low == base:
             return f
-        if name.lower() in base:
+        # name without ext matches base without ext
+        if name_low == os.path.splitext(base)[0]:
+            return f
+        # substring
+        if name_low in base:
+            return f
+        # also handle like "ro" -> spam_ro.txt
+        if name_low in ["ro", "romana", "romanian"]:
+            if "spam_ro" in base or "lines_ro" in base or "ro.txt" in base:
+                # prefer spam_ro first
+                if "spam_ro" in base:
+                    return f
+        if name_low in ["en", "eng", "english"]:
+            if "spam_en" in base or "lines_en" in base:
+                if "spam_en" in base:
+                    return f
+    # second pass for ro/en
+    for f in list_seq_files():
+        base = os.path.basename(f).lower()
+        if low in ["ro", "romana"] and "ro" in base:
+            return f
+        if low in ["en", "english"] and "en" in base:
             return f
     return None
 
 def load_lines(path=None):
-    """Load lines from a file; fall back to default RO botjura then hardcoded defaults."""
-    for cand in filter(None, [path, "botjura.txt", "data/lines_default.txt"]):
+    """Load lines from a file; fall back to default RO botjura then hardcoded defaults.
+    Also strips legacy '> #' prefix if present.
+    """
+    for cand in filter(None, [path, "botjura.txt", "data/lines_default.txt", "data/spam.txt"]):
         if os.path.exists(cand):
             try:
-                with open(cand, "r", encoding="utf-8", errors="replace") as f:
-                    lines = [l.rstrip("\r\n") for l in f if l.strip()]
-                if lines:
-                    return lines
+                with open(cand, "r", encoding="utf-8", errors="replace") as fh:
+                    lines = []
+                    for l in fh:
+                        raw = l.rstrip("\r\n")
+                        if not raw.strip():
+                            continue
+                        # strip legacy "> # " prefix if user asked to remove it
+                        s = raw.lstrip()
+                        if s.startswith("> #"):
+                            s = s[3:].lstrip()
+                        elif s.startswith(">"):
+                            s = s[1:].lstrip()
+                        elif s.startswith("#"):
+                            # keep # if it's not the spam prefix? we strip only if it looks like comment prefix
+                            # but user said fara > # - so if line starts with > # we already handled
+                            pass
+                            s = raw
+                        else:
+                            s = raw
+                        # final strip but keep content
+                        if s.strip():
+                            lines.append(s.strip())
+                    if lines:
+                        return lines
             except Exception:
                 pass
     return list(DEFAULT_MESSAGES)
 
-def resolve_target_from_text(ctx, text):
-    """Given a chunk of text, try to extract a user mention/ID and return (user, rest)."""
-    if not text:
-        return (None, "")
-    import re as _re
-    # discord mention <@!123> or <@123>
-    m = _re.match(r"^\s*<@!?(\d+)>\s*(.*)$", text)
+async def resolve_single_user(ctx, token):
+    """Resolve one token to a user/member or None."""
+    if not token:
+        return None
+    tok = token.strip()
+    if not tok:
+        return None
+    # mention <@!123> or <@123>
+    m = re.match(r'^<@!?(\d+)>$', tok)
     if m:
         uid = int(m.group(1))
-        rest = m.group(2).strip()
-        try:
-            if ctx.guild:
-                mem = ctx.guild.get_member(uid)
-                if mem:
-                    return (mem, rest)
+        u = None
+        if ctx.guild:
+            u = ctx.guild.get_member(uid)
+        if not u:
             u = ctx.bot.get_user(uid)
-            if not u:
-                u = asyncio.run_coroutine_threadsafe(ctx.bot.fetch_user(uid), ctx.bot.loop).result()
-            if u:
-                return (u, rest)
-        except Exception:
-            pass
+        if not u:
+            try:
+                u = await ctx.bot.fetch_user(uid)
+            except Exception:
+                u = None
+        return u
     # plain numeric id
-    m = _re.match(r"^\s*(\d{15,20})\s*(.*)$", text)
-    if m:
-        uid = int(m.group(1))
-        rest = m.group(2).strip()
+    if tok.isdigit() and len(tok) >= 15:
         try:
+            uid = int(tok)
+            u = None
             if ctx.guild:
-                mem = ctx.guild.get_member(uid)
-                if mem:
-                    return (mem, rest)
-            u = ctx.bot.get_user(uid)
+                u = ctx.guild.get_member(uid)
             if not u:
-                u = asyncio.run_coroutine_threadsafe(ctx.bot.fetch_user(uid), ctx.bot.loop).result()
-            if u:
-                return (u, rest)
+                u = ctx.bot.get_user(uid)
+            if not u:
+                try:
+                    u = await ctx.bot.fetch_user(uid)
+                except Exception:
+                    u = None
+            return u
         except Exception:
-            pass
-    # mention by word starting with @
-    if text.lstrip().startswith("@"):
-        # grab the @word
-        mm = _re.match(r"^\s*@(\S+)\s*(.*)$", text)
-        if mm:
-            uname = mm.group(1)
-            rest = mm.group(2).strip()
-            if ctx.guild:
-                low = uname.lower()
-                for mem in ctx.guild.members:
-                    if mem.name.lower() == low or (mem.nick and mem.nick.lower() == low) or \
-                       str(mem).lower().startswith(low):
-                        return (mem, rest)
-            # try by username in client cache
-            for u in ctx.bot.users:
-                if u.name.lower() == low or str(u).lower().startswith(low):
-                    return (u, rest)
-    return (None, text)
+            return None
+    # @username or plain name
+    clean = tok.lstrip('@').strip()
+    if not clean:
+        return None
+    low = clean.lower()
+    # exact match in guild
+    if ctx.guild:
+        for mem in ctx.guild.members:
+            if mem.name.lower() == low or (mem.nick and mem.nick.lower() == low):
+                return mem
+        # partial
+        for mem in ctx.guild.members:
+            if low in mem.name.lower() or (mem.nick and low in mem.nick.lower()):
+                return mem
+        # display name contains
+        for mem in ctx.guild.members:
+            try:
+                if low in mem.display_name.lower():
+                    return mem
+            except Exception:
+                pass
+    # cache users
+    for u in ctx.bot.users:
+        if u.name.lower() == low:
+            return u
+    for u in ctx.bot.users:
+        if low in u.name.lower():
+            return u
+    return None
 
 def register(b, state):
 
-    async def run_spam(channel, target, lines, delay=0.8, file_label=None):
-        """Background spam loop. If target is set, substitute {t} with target.mention; else strip {t}."""
+    async def run_spam(channel, targets, lines, delay=0.8, file_label=None):
+        """Background spam loop. Supports multiple targets."""
         state["spam_channels"].add(channel.id)
         state["active_spam_channel"] = channel.id
-        mention = target.mention if target else ""
-        count = 0
+        # Build mention string
+        if targets:
+            mentions = " ".join(t.mention for t in targets if hasattr(t, 'mention'))
+        else:
+            mentions = ""
         idx = 0
         try:
             while state["spamming"] and channel.id in state.get("spam_channels", set()):
                 raw = lines[idx % len(lines)]
                 idx += 1
-                if target and "{t}" in raw:
-                    msg = raw.replace("{t}", mention)
-                elif target:
-                    msg = f"{mention} {raw}"
+                # handle {t} placeholder
+                if "{t}" in raw:
+                    if mentions:
+                        msg = raw.replace("{t}", mentions)
+                    else:
+                        msg = raw.replace("{t}", "").strip()
                 else:
-                    msg = raw.replace("{t}", "").strip()
+                    if mentions:
+                        msg = f"{mentions} {raw}"
+                    else:
+                        msg = raw
+                msg = msg.strip()
                 if not msg:
                     continue
+                # Discord limit
+                if len(msg) > 1999:
+                    msg = msg[:1999]
                 try:
-                    await channel.send(msg[:1999])
-                    count += 1
+                    await channel.send(msg)
                 except discord.Forbidden:
                     break
                 except discord.HTTPException as e:
@@ -144,7 +242,6 @@ def register(b, state):
                     await asyncio.sleep(2)
                 except Exception:
                     await asyncio.sleep(2)
-                # small random jitter
                 await asyncio.sleep(delay + random.uniform(-0.1, 0.25))
         except asyncio.CancelledError:
             pass
@@ -155,80 +252,83 @@ def register(b, state):
 
     @b.command(name="start")
     async def _start(ctx, *, args: str = None):
+        """
+        $start [user1] [user2] ... [file]
+        Examples:
+          $start
+          $start @user
+          $start @user1 @user2 @user3
+          $start ionut vasile alex data/longspam_en.txt
+          $start 123456789 ro
+          $start en.txt
+          $start @user en
+        """
         track_cmd("start"); await del_msg(ctx.message)
-        target = None
         filepath = None
-        rest = args or ""
-        # Resolve possible user at the start
-        if rest:
-            maybe_t, after = await b.loop.run_in_executor(None, lambda: resolve_target_from_text(ctx, rest))
-            # can't do blocking fetch in executor cleanly; do it manually with the ctx:
-            # Re-do it async here for fetches
-            import re as _re
-            uid = None
-            rem = rest
-            m = _re.match(r"^\s*<@!?(\d+)>\s*(.*)$", rest)
-            if m:
-                uid = int(m.group(1)); rem = m.group(2).strip()
-            else:
-                m = _re.match(r"^\s*(\d{15,20})\s*(.*)$", rest)
-                if m:
-                    uid = int(m.group(1)); rem = m.group(2).strip()
-            if uid:
-                u = None
-                if ctx.guild:
-                    u = ctx.guild.get_member(uid)
-                if not u:
-                    u = ctx.bot.get_user(uid)
-                if not u:
-                    try:
-                        u = await ctx.bot.fetch_user(uid)
-                    except Exception:
-                        u = None
-                if u:
-                    target = u
-                else:
-                    rem = rest  # invalid id - treat as text
-            else:
-                # @username prefix
-                m = _re.match(r"^\s*@(\S+)\s*(.*)$", rest)
-                if m:
-                    un = m.group(1); rem = m.group(2).strip()
-                    found = None
-                    if ctx.guild:
-                        low = un.lower()
-                        for mem in ctx.guild.members:
-                            if mem.name.lower() == low or (mem.nick and mem.nick.lower() == low):
-                                found = mem; break
-                    if not found:
-                        for u in ctx.bot.users:
-                            if u.name.lower() == un.lower():
-                                found = u; break
-                    if found:
-                        target = found
-                    else:
-                        rem = rest  # unknown @name - treat as plaintext
-        # Now `rem` is the text after the user (if any). First token could be a filename.
-        if rem:
-            tok = rem.split()[0]
-            path = resolve_seq_file(tok)
+        tokens = []
+        if args:
+            tokens = args.strip().split()
+
+        # Detect file at the end
+        if tokens:
+            last = tokens[-1]
+            path = resolve_seq_file(last)
             if path:
                 filepath = path
-            # else no file arg - use default
+                tokens = tokens[:-1]
+            else:
+                # also try last two tokens combined? like "data/longspam_en.txt" might be split? No, it's one token
+                pass
+
+        # If tokens empty, no targets
+        targets = []
+        # Add mentions from message first (discord.py parses them)
+        if ctx.message.mentions:
+            for m in ctx.message.mentions:
+                if m.id != b.user.id and m not in targets:
+                    targets.append(m)
+
+        # Resolve remaining tokens as users
+        for tok in tokens:
+            # skip if token already resolved as mention id
+            # if tok is mention string, it would have been handled but we also resolve
+            u = await resolve_single_user(ctx, tok)
+            if u and u.id != b.user.id and u not in targets:
+                # avoid duplicates by id
+                if not any(x.id == u.id for x in targets):
+                    targets.append(u)
+
+        # Limit to 10
+        if len(targets) > 10:
+            targets = targets[:10]
+
         # Choose default file based on current start_lang if set
         if not filepath:
             lang = state.get("start_lang", "")
             if lang:
                 filepath = resolve_seq_file(lang) or resolve_seq_file(f"lines_{lang}")
             if not filepath:
-                filepath = "botjura.txt" if os.path.exists("botjura.txt") else "data/lines_default.txt"
+                # prefer spam.txt if exists, else botjura.txt
+                if os.path.exists("data/spam.txt"):
+                    filepath = "data/spam.txt"
+                elif os.path.exists("botjura.txt"):
+                    filepath = "botjura.txt"
+                else:
+                    filepath = "data/lines_default.txt"
+
         lines = load_lines(filepath)
         # Stop any existing spam in this channel
         state["spam_channels"].discard(ctx.channel.id)
         state["spamming"] = True
-        b.loop.create_task(run_spam(ctx.channel, target, lines, file_label=filepath))
-        tgt_name = f" @{target.name}" if target else ""
-        await safe_send(ctx, f"Sequence started{tgt_name} (`{os.path.basename(filepath)}`, {len(lines):,} lines). $stop to stop.", delete_after=6)
+        b.loop.create_task(run_spam(ctx.channel, targets, lines, file_label=filepath))
+
+        if targets:
+            names = ", ".join(f"@{t.name}" for t in targets[:3])
+            if len(targets) > 3:
+                names += f" +{len(targets)-3} more"
+            await safe_send(ctx, f"Sequence started for {names} (`{os.path.basename(filepath)}`, {len(lines):,} lines, {len(targets)} users). $stop to stop.", delete_after=7)
+        else:
+            await safe_send(ctx, f"Sequence started (`{os.path.basename(filepath)}`, {len(lines):,} lines). $stop to stop.", delete_after=6)
 
     @b.command(name="stop")
     async def _stop(ctx):
@@ -245,9 +345,13 @@ def register(b, state):
         files = list_seq_files()
         if not files:
             return await safe_send(ctx, "No .txt line files found. Drop files in data/ or edit botjura.txt.", delete_after=10)
-        lines = ["Available line files:"]
+        lines_out = []
+        lines_out.append("╭─ 𝓡𝓔𝓓 𝓢𝓔𝓛𝓕𝓑𝓞𝓣 - LINE PACKS ─╮")
         for i, f in enumerate(files, 1):
-            sz = os.path.getsize(f)/1024
+            try:
+                sz = os.path.getsize(f)/1024
+            except:
+                sz = 0
             lc = 0
             try:
                 with open(f, "rb") as fh:
@@ -256,28 +360,44 @@ def register(b, state):
                 pass
             tag = ""
             if f == "botjura.txt":
-                tag = " (default)"
+                tag = " (default legacy)"
             elif os.path.basename(f) == f"lines_{state.get('start_lang','default')}.txt" and state.get("start_lang"):
                 tag = f" (lang={state.get('start_lang')})"
-            lines.append(f"  {i:2d}. {f}  [{lc:,} lines, {sz:.1f} KB]{tag}")
-        lines.append("")
-        lines.append("Usage:")
-        lines.append("  $start                  - spam default file")
-        lines.append("  $start @user            - spam default, pinging @user")
-        lines.append("  $start @user en.txt     - spam en.txt pinging @user")
-        lines.append("  $start en.txt           - spam en.txt no mention")
-        lines.append("  $startlang <name>       - set default language/file")
-        await safe_send(ctx, code_block("\n".join(lines)), delete_after=40)
+            elif "spam_ro" in f:
+                tag = " [RO SHORT]"
+            elif "spam_en" in f:
+                tag = " [EN SHORT + GIFS]"
+            elif "longspam_ro" in f:
+                tag = " [RO LONG 2026]"
+            elif "longspam_en" in f:
+                tag = " [EN LONG 2026 + GIFS]"
+            elif "spam.txt" in f:
+                tag = " [MIX]"
+            lines_out.append(f"  {i:2d}. {f} [{lc:,} lines, {sz:.1f} KB]{tag}")
+        lines_out.append("╰────────────────────────────────╯")
+        lines_out.append("")
+        lines_out.append("Usage (multi-user supported):")
+        lines_out.append("  $start                          - spam default file")
+        lines_out.append("  $start @user                    - spam default, pinging @user")
+        lines_out.append("  $start @u1 @u2 @u3              - spam 3 users at once")
+        lines_out.append("  $start ionut vasile alex en.txt - 3 names + file at end")
+        lines_out.append("  $start @user en.txt             - spam en.txt pinging @user")
+        lines_out.append("  $start en.txt                   - spam en.txt no mention")
+        lines_out.append("  $start ro                       - short for spam_ro / lines_ro")
+        lines_out.append("  $startlang <name>               - set default language/file")
+        lines_out.append("")
+        lines_out.append("New packs: spam_ro, spam_en, longspam_ro, longspam_en, spam")
+        lines_out.append("Drop any .txt into data/ and it appears instantly.")
+        await safe_send(ctx, code_block("\n".join(lines_out)), delete_after=45)
 
     @b.command(name="startlang")
     async def _startlang(ctx, lang: str = None):
         track_cmd("startlang"); await del_msg(ctx.message)
         if not lang:
-            files = [f for f in os.listdir("data") if f.startswith("lines_") and f.endswith(".txt")] if os.path.isdir("data") else []
-            msg = "Current default: " + (state.get("start_lang","botjura.txt")) + "\n"
-            msg += "Available: " + (", ".join(f.replace("lines_","").replace(".txt","") for f in files) if files else "(none)")
+            files = [f for f in os.listdir("data") if f.endswith(".txt")] if os.path.isdir("data") else []
+            msg = "Current default: " + (state.get("start_lang","botjura.txt / spam.txt")) + "\n"
+            msg += "Available: " + (", ".join(files) if files else "(none)")
             return await safe_send(ctx, msg, delete_after=15)
-        # Validate that the file exists
         path = resolve_seq_file(lang)
         if not path:
             return await safe_send(ctx, f"No file matching '{lang}'. Use $startl to list files.", delete_after=8)
@@ -290,9 +410,8 @@ def register(b, state):
         track_cmd("spam"); await del_msg(ctx.message)
         if not text_and_args:
             return await safe_send(ctx, "$spam [text] [count] [delay]", delete_after=5)
-        import re as _re
         # Trailing two optional numbers
-        m = _re.match(r"^(.*?)(?:\s+(\d+))?(?:\s+(\d+(?:\.\d+)?))?\s*$", text_and_args)
+        m = re.match(r"^(.*?)(?:\s+(\d+))?(?:\s+(\d+(?:\.\d+)?))?\s*$", text_and_args)
         text = m.group(1).strip() if m else text_and_args
         count = int(m.group(2)) if m and m.group(2) else 5
         delay = float(m.group(3)) if m and m.group(3) else 0.5
