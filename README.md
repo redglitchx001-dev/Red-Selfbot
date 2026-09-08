@@ -20,19 +20,25 @@ export DISCORD_TOKEN="your_token"      # or echo "your_token" > token.txt
 python main.py
 ```
 
-The dashboard is served on the port in `$PORT` (default `10000`).
+The dashboard is served on `0.0.0.0:$PORT` (default `3000`, works with preview, not localhost-only). Panel fancy gradient 2026 edition.
 
 ## Layout
 
 ```
-main.py              # Entry + web dashboard
+main.py              # Entry + web dashboard 0.0.0.0:3000 fancy gradient 2026
 cmds/                # One Python module per category
   help.py   text.py    fun.py     util.py   info.py   spam.py  music.py
   profiles.py cloner.py archives.py protect.py logger.py status.py multi.py ai.py
 utils/common.py      # Shared helpers / text transforms
-data/lines_*.txt     # $start sequence packs (EN/RO/default, 750k lines each)
-botjura.txt          # Default RO sequence pack (750k lines, legacy path)
-generate_lines.py    # Regenerate line packs up to 1M lines each
+data/                # $start packs 2026 - NO > # prefix, BIG text
+  spam_ro.txt        # RO ONLY short 3k lines
+  spam_en.txt        # EN ONLY + GIFs short 3k lines
+  longspam_ro.txt    # RO LONG 2026 9k lines hardcore roast
+  longspam_en.txt    # EN LONG 2026 + GIFs 9k lines
+  spam.txt           # MIX RO+EN 4k lines
+  lines_ro.txt / lines_en.txt / lines_default.txt # legacy compat
+botjura.txt          # Default RO legacy (copy of lines_ro, 9k lines)
+generate_lines.py    # Regenerate packs up to 1M each
 music/ profiles/ clones/ archives/ logs/   # Runtime storage
 ```
 
@@ -61,28 +67,35 @@ kept under 1900 characters. Jump to categories with:
 | `$hmulti` | Multi-account |
 | `$hall` | Everything in one scroll |
 
-## `$start` — works everywhere
+## `$start` — works everywhere [MULTI-USER 2026]
 
-`$start` works in servers, groups, and DMs. Choose your line pack:
+`$start` works in servers, groups, and DMs. Supports multiple users + file at end. Choose your line pack:
 
 ```
-$start                     # default (botjura.txt / $startlang)
-$start @bro                # default pack, pings @bro
-$start @bro en.txt         # en.txt pinging @bro
-$start 123456789 ro.txt    # by user ID, ro.txt
-$start en.txt              # en.txt no mention
-$startl                    # list all line files (counts/sizes/default)
-$startlang en              # switch default to en
-$stop                      # halt everything
+$start                              # default (spam.txt / $startlang)
+$start @bro                         # default pack, pings @bro
+$start @user1 @user2 @user3         # 3 users at once (NEW)
+$start ionut vasile alex spam_ro.txt # 3 names + file at end (NEW)
+$start @bro en.txt                  # en.txt pinging @bro
+$start @user1 @user2 longspam_en.txt # 2 users + long EN pack + gifs
+$start 123456789 ro.txt             # by user ID, ro.txt
+$start en.txt                       # en.txt no mention (EN only + gifs)
+$start ro                           # short for spam_ro / lines_ro (RO only)
+$startl                             # list all line files fancy gradient
+$startlang en                       # switch default to en
+$stop                               # halt everything
 ```
 
 Drop any `.txt` file into `data/` and it will appear in `$startl` immediately — no restart.
-Lines can contain `{t}` which gets replaced with the target mention; lines without it just get
-the mention prepended. Three 750,000-line packs are shipped (EN, RO, mixed).
+Lines can contain `{t}` which gets replaced with the target mention(s); lines without it just get
+the mention(s) prepended. Packs are NO `> #` prefix - each line is BIG text as requested.
+RO packs = only romana, EN packs = only english + gifs from net.
+2026 packs: spam_ro (3k), spam_en (3k + gifs), longspam_ro (9k), longspam_en (9k + gifs), spam (4k mix).
 Regenerate larger packs (up to 1 million lines each) with:
 
 ```bash
-python generate_lines.py 1000000
+python generate_lines.py 10000   # 10k short / 30k long
+python generate_lines.py 1000000 # 1M short / 3M long (heavy)
 ```
 
 ## AI
